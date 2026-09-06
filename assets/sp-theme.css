@@ -1,0 +1,630 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   SuperPlat — Dark Theme
+   ──────────────────────────────────────────────────────────────────────────
+   설계 원칙
+
+   1. Light 를 새로 그리지 않습니다. 이 파일은 Light Design System 을
+      Dark 로 "확장"만 합니다. 레이아웃 · spacing · radius · typography ·
+      component 구조 · motion 은 단 한 줄도 건드리지 않습니다.
+
+   2. 색은 세 층으로만 관리합니다.
+        ① 채널 토큰   --ink-rgb / --line-rgb
+           → 사이트 전역의 rgba(잉크, α) 테두리·divider·보조텍스트가
+             이 두 값만 바꾸면 알파(계층) 그대로 반전됩니다.
+        ② 시맨틱 토큰 --bg / --bg-gray / --card / --band / --ink / --body ...
+           → 페이지 CSS 가 이미 쓰고 있는 토큰을 Dark 값으로 재정의합니다.
+        ③ 컴포넌트 예외
+           → 하드코딩된 흰색 표면, "--ink 를 배경으로 쓰는 버튼",
+             이미 어두운 영역(hero / 공간 섹션 / 이미지 위 텍스트)만
+             개별로 다룹니다.
+
+   3. 이미지에는 절대 filter 를 걸지 않습니다.
+      사진 · 3D 캐릭터 · 게임 공간의 색은 SUPERPLAT Identity 의 일부입니다.
+      필요한 곳(텍스트가 이미지 위에 얹히는 곳)의 overlay 값만 다룹니다.
+
+   4. Pure Black(#000) 을 페이지 배경으로 쓰지 않습니다.
+      Pure White 테두리도 쓰지 않습니다 (최대 white 32%).
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ══ 0. Theme 전환 모션 ═══════════════════════════════════════════════════
+   평소에는 색 transition 이 꺼져 있습니다 (스크롤 중 hover 전환과 겹치지 않게).
+   토글을 누른 순간에만 sp-theme.js 가 .theme-anim 을 340ms 동안 붙입니다
+   (색 transition 280ms 가 끝난 뒤에 떼도록 창을 조금 더 길게 잡습니다).
+   이미지에는 걸지 않습니다 — 사진이 페이드되는 느낌을 주지 않기 위해서입니다. */
+html.theme-anim,
+html.theme-anim body,
+html.theme-anim :where(header,footer,section,main,aside,nav,div,p,span,a,button,input,textarea,select,table,th,td,li,h1,h2,h3,h4){
+  transition-property:background-color,border-color,color,fill,stroke,box-shadow;
+  transition-duration:280ms;
+  transition-timing-function:cubic-bezier(.22,1,.36,1);
+}
+html.theme-anim img,
+html.theme-anim video,
+html.theme-anim canvas,
+html.theme-anim svg image{ transition:none !important }
+@media (prefers-reduced-motion:reduce){
+  html.theme-anim,html.theme-anim *{transition-duration:1ms !important}
+}
+
+/* ══ 1. Theme toggle 버튼 (두 테마 공통) ══════════════════════════════════
+   기존 .header__icon 히트 영역(42 / 44px)과 정렬을 그대로 씁니다.
+   Optical size — moon 은 꽉 찬 실루엣, sun 은 광선이 있어 더 커 보이므로
+   sun 을 살짝 작게 잡습니다. */
+.header__theme{position:relative}
+.header__theme .ic{stroke:none;fill:currentColor;display:block}
+.header__theme .ic--moon{width:17.5px;height:17.5px}
+.header__theme .ic--sun{width:19px;height:19px}
+.header__theme .ic--sun{display:none}
+html[data-theme="dark"] .header__theme .ic--moon{display:none}
+html[data-theme="dark"] .header__theme .ic--sun{display:block}
+@media (max-width:767px){
+  .header__theme .ic--moon{width:19px;height:19px}
+  .header__theme .ic--sun{width:20.5px;height:20.5px}
+}
+/* 모바일 헤더 — [ Profile ] [ Hamburger ] 두 개만 남습니다.
+   테마 토글은 헤더에서 내려가고 모바일 메뉴의 「화면 설정」 세그먼트가
+   같은 SPTheme 상태를 씁니다 → assets/sp-nav.css §1 · §5              */
+
+/* ══════════════════════════════════════════════════════════════════════════
+   2. DARK — 토큰 재정의
+   ══════════════════════════════════════════════════════════════════════════ */
+html[data-theme="dark"]{
+  color-scheme:dark;
+
+  /* ── 채널 ─────────────────────────────────────────────────────────────
+     기존의 rgba(잉크, α) 규칙이 전부 rgba(흰색, α) 로 뒤집힙니다.
+     알파는 그대로라서 Light 에서 만든 계층(테두리 8~16% / 텍스트 46~68%)이
+     Dark 에서도 같은 비율로 유지됩니다. */
+  --ink-rgb:243,246,251;
+  --line-rgb:255,255,255;
+
+  /* ── Surface layer ────────────────────────────────────────────────────
+     Pure Black 대신 중성 다크 그레이 4단계로 깊이를 만듭니다.
+       bg        #131518   페이지 base
+       bg-gray   #181B1F   섹션 band
+       card      #1B1F24   1차 표면(카드 · 입력 · 리스트)
+       elevated  #23272E   떠 있는 표면(드롭다운 · 모달 · 토스트)      */
+  --bg:#131518;
+  --bg-gray:#181B1F;
+  --card:#1B1F24;
+  --band:#16191D;
+  --sp-elev:#23272E;
+  --sp-surface:#1B1F24;
+  --sp-surface-2:#20242A;
+
+  /* ── Text ─────────────────────────────────────────────────────────────
+     전부 pure white 로 만들지 않고 4단계로 나눕니다.
+       primary 96% · secondary 74% · tertiary 56% · disabled 36%          */
+  --ink:#F3F6FB;
+  --ink-soft:#DFE4EC;
+  --body:rgba(243,246,251,.74);
+  --body-2:rgba(243,246,251,.82);
+  --body-2nd:rgba(243,246,251,.56);
+  --line:rgba(255,255,255,.10);
+
+  /* ── Semantic ─────────────────────────────────────────────────────────
+     어두운 배경에서 읽히도록 명도만 올립니다 (Hue 는 그대로 유지). */
+  --ok:#5FD69B;
+  --err:#FF8A80;
+  --err-bg:rgba(255,138,128,.12);
+
+  /* ── 공통 Dropdown / Field System (assets/sp-ui.js 토큰) ─────────────── */
+  --sp-menu-bg:#23272E;
+  --sp-menu-bd:rgba(255,255,255,.08);
+  --sp-menu-sh:0 12px 34px rgba(0,0,0,.46), 0 0 0 1px rgba(255,255,255,.06);
+  --sp-opt-hover:rgba(255,255,255,.06);
+  --sp-opt-sel:rgba(255,255,255,.10);
+  --sp-fld-bd:rgba(255,255,255,.12);
+  --sp-fld-bd-hover:rgba(255,255,255,.24);
+  --sp-ink:#F3F6FB;
+  --sp-ink-2:rgba(243,246,251,.58);
+  --sp-mute:rgba(243,246,251,.56);
+
+  /* WORLD 카드 서브텍스트 — Light 의 #1C1C1C 를 그대로 쓰면 안 보입니다 */
+  --wcard-desc:rgba(255,255,255,.82);
+
+  /* NEWS 모바일 리스트 — 제목 > 메타 > divider 위계를 다크에서도 유지 */
+  --news-title:#F5F5F5;
+  --news-tab-off:rgba(255,255,255,.72);
+  --news-meta-label:rgba(255,255,255,.56);
+  --news-meta-value:rgba(255,255,255,.74);
+  --news-divider:rgba(255,255,255,.10);
+
+  /* 이벤트 상태 태그 — 진행중은 dark green tint + 밝은 green 글자,
+     종료됨은 neutral. 종료됨도 Disabled 처럼 흐려지지 않게 .68 이상을 씁니다. */
+  --ev-on-bg:rgba(52,199,123,.16);  --ev-on-fg:#7BE3AC;  --ev-on-line:rgba(123,227,172,.22);
+  --ev-off-bg:rgba(255,255,255,.07); --ev-off-fg:rgba(255,255,255,.70); --ev-off-line:transparent;
+
+  /* 마이페이지 안내 배너 — Light 의 #F4F8FD 를 그대로 쓰면 다크에서 밝은 판이
+     떠 보이고, 그 위 본문(흰색 74%)은 대비 1.01 : 1 로 사라집니다. */
+  --mpnote-bg:rgba(94,158,224,.10);
+  --mpnote-line:rgba(120,175,235,.30);
+  --mpnote-key:#8FC2F5;
+  --mpnote-body:rgba(243,246,251,.80);
+}
+
+/* Light 에서만 쓰는 sp-ui 기본값 보강 (Dark 에서 --sp-elev 등을 참조하기 위함) */
+:root{ --sp-elev:#fff; --sp-surface:#fff; --sp-surface-2:#F7F8F9; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   3. DARK — 공통 컴포넌트
+   ══════════════════════════════════════════════════════════════════════════ */
+html[data-theme="dark"] body{background:var(--bg);color:var(--ink)}
+
+/* ── 3-1. Solid "ink" 버튼 ───────────────────────────────────────────────
+   Light 에서 배경이 var(--ink) 인 버튼들입니다. Dark 에서 --ink 가 거의 흰색이
+   되므로 글자색을 어둡게 뒤집어 줘야 합니다 (spec §18 — Light button on Dark).
+   버튼의 hierarchy(Primary / Secondary / Tertiary / Danger)는 그대로입니다. */
+html[data-theme="dark"] .cta__btn,
+html[data-theme="dark"] .wmore__btn,
+html[data-theme="dark"] .nmore__btn,
+html[data-theme="dark"] .smore__btn,
+html[data-theme="dark"] .sbtn,
+html[data-theme="dark"] .abtn,
+html[data-theme="dark"] .dl__btn,
+html[data-theme="dark"] .mpbtn,
+html[data-theme="dark"] .mpchip.is-on,
+html[data-theme="dark"] .nchip[aria-pressed="true"],
+html[data-theme="dark"] .steps__i.is-on,
+html[data-theme="dark"] .adone__mark,
+html[data-theme="dark"] .nrow__badge{
+  background:var(--ink);color:#14171B;
+}
+html[data-theme="dark"] .cta__btn:hover,
+html[data-theme="dark"] .wmore__btn:hover,
+html[data-theme="dark"] .nmore__btn:hover,
+html[data-theme="dark"] .smore__btn:hover,
+html[data-theme="dark"] .sbtn:hover,
+html[data-theme="dark"] .abtn:hover:not([disabled]),
+html[data-theme="dark"] .dl__btn:hover,
+html[data-theme="dark"] .mpbtn:hover{
+  background:#FFFFFF;color:#14171B;
+}
+
+/* ── 3-1b. Download CTA — Theme Token ────────────────────────────────────
+   ⚠️ 고쳐진 버그
+     Dark 에서 Hero 위(투명 헤더)의 다운로드 버튼이
+       background:var(--white) = #FFFFFF
+       color:var(--ink)        = #F3F6FB   ← Dark 에서 --ink 가 거의 흰색
+     이 되어 **흰 글씨가 흰 배경 위**에 놓였습니다 (대비 약 1.04:1).
+     기존에는 "스크롤 후 / auth · mypage · legal · detail" 상태만 뒤집고 있어서
+     Hero 위 기본 상태가 빠져 있었습니다.
+
+   이제 색을 selector 마다 하드코딩하지 않고 토큰 하나로 모읍니다.
+     --dl-*         Hero 위(투명 헤더) pill
+     --dl-solid-*   불투명 표면 위 pill — 스크롤 후 · auth/mypage/legal/detail ·
+                    모바일 메뉴 CTA(.drawer__cta) 가 **같은 토큰**을 씁니다 (§5)
+
+   Light 값은 기존 렌더링과 완전히 동일합니다 (§3 — Light 불변).
+   text-shadow 는 쓰지 않습니다. 대비는 색 자체로만 확보합니다.        */
+:root{
+  --dl-bg:#FFFFFF;            /* 기존 var(--white) */
+  --dl-fg:var(--ink);
+  --dl-bg-hover:#EFEFEF;
+  --dl-bg-active:#EFEFEF;     /* Light 는 눌림 시에도 색 변화 없음(기존과 동일) */
+  --dl-solid-bg:var(--ink);
+  --dl-solid-fg:#FFFFFF;
+  --dl-solid-hover:#333B45;
+}
+html[data-theme="dark"]{
+  /* 밝은 Neutral 표면 + #111318 텍스트 → 대비 약 17:1.
+     순백(#FFF)보다 한 단계 낮춰 Header Navigation 보다 과하게 튀지 않게 합니다. */
+  --dl-bg:#EDEFF4;
+  --dl-fg:#111318;
+  --dl-bg-hover:#FFFFFF;      /* Hover 는 밝기만 미세하게 — 텍스트 대비는 그대로 */
+  --dl-bg-active:#DCE1E9;
+  --dl-solid-bg:#EDEFF4;
+  --dl-solid-fg:#111318;
+  --dl-solid-hover:#FFFFFF;
+}
+.btn-download{background:var(--dl-bg);color:var(--dl-fg)}
+.btn-download:hover{background:var(--dl-bg-hover);color:var(--dl-fg)}
+.btn-download:active{background:var(--dl-bg-active);color:var(--dl-fg)}
+.header.is-scrolled .btn-download,
+.is-menu .btn-download,
+.auth-page .header .btn-download,
+.mypage .header .btn-download,
+.legal-page .header .btn-download,
+.is-detail .header .btn-download,
+.drawer__cta{background:var(--dl-solid-bg);color:var(--dl-solid-fg)}
+.header.is-scrolled .btn-download:hover,
+.auth-page .header .btn-download:hover,
+.mypage .header .btn-download:hover,
+.legal-page .header .btn-download:hover,
+.is-detail .header .btn-download:hover{background:var(--dl-solid-hover);color:var(--dl-solid-fg)}
+/* Focus ring — 표면의 반대색이라 Light/Dark · 투명/불투명 헤더 네 경우 모두 보입니다 */
+.btn-download:focus-visible,
+.drawer__cta:focus-visible{outline:2px solid var(--dl-solid-bg);outline-offset:3px}
+/* Secondary / Ghost — 표면 + 얇은 테두리 */
+html[data-theme="dark"] .sbtn--ghost,
+html[data-theme="dark"] .abtn--ghost,
+html[data-theme="dark"] .mpbtn-s,
+html[data-theme="dark"] .mpbtn-s--quiet,
+html[data-theme="dark"] .nchip,
+html[data-theme="dark"] .mpchip{
+  background:var(--sp-surface);color:var(--ink);
+}
+html[data-theme="dark"] .sbtn--ghost:hover,
+html[data-theme="dark"] .abtn--ghost:hover:not([disabled]),
+html[data-theme="dark"] .mpbtn-s:hover,
+html[data-theme="dark"] .nchip:hover,
+html[data-theme="dark"] .mpchip:hover{ background:#262A31 }
+/* Danger — 확인 단계에서만 강해집니다 (기존 hierarchy 유지) */
+html[data-theme="dark"] .abtn--danger{background:var(--err);color:#2A0F0C}
+html[data-theme="dark"] .abtn--danger:hover:not([disabled]){background:#FFA9A0}
+html[data-theme="dark"] .mpbtn-s--solid{background:var(--err);border-color:var(--err);color:#2A0F0C}
+html[data-theme="dark"] .mpbtn-s--danger{color:var(--err);border-color:rgba(255,138,128,.34)}
+
+/* ── 3-2. Header ─────────────────────────────────────────────────────────
+   Smart Header 동작(스크롤 다운 숨김 / 업 표시)과 구조는 그대로입니다.
+   text-shadow 는 계속 사용하지 않습니다. */
+html[data-theme="dark"] .header.is-scrolled{
+  background:rgba(19,21,24,.94);
+  -webkit-backdrop-filter:saturate(180%) blur(14px);
+          backdrop-filter:saturate(180%) blur(14px);
+  box-shadow:0 1px 0 rgba(255,255,255,.06);
+}
+html[data-theme="dark"] .header.is-scrolled .header__link,
+html[data-theme="dark"] .header.is-scrolled .header__icon,
+html[data-theme="dark"] .header.is-scrolled .header__burger,
+html[data-theme="dark"].is-menu .header__link,
+html[data-theme="dark"].is-menu .header__icon,
+html[data-theme="dark"].is-menu .header__burger{color:var(--ink)}
+html[data-theme="dark"] .header.is-scrolled .header__icon:hover{background:rgba(255,255,255,.08)}
+/* 로고 원본은 흰색입니다 — Light 에서만 어둡게 뒤집습니다. Dark 에서는 원본 그대로. */
+html[data-theme="dark"] .header.is-scrolled .header__logo img,
+html[data-theme="dark"].is-menu .header__logo img,
+html[data-theme="dark"] .footer__logo img{filter:none}
+/* 로그인/서브 페이지처럼 처음부터 흰 배경이던 헤더 */
+html[data-theme="dark"].auth-page .header,
+html[data-theme="dark"].mypage .header,
+html[data-theme="dark"].legal-page .header,
+html[data-theme="dark"].is-detail .header{
+  background:rgba(19,21,24,.94);
+  box-shadow:0 1px 0 rgba(255,255,255,.06);
+}
+/* 이 페이지들은 헤더가 처음부터 흰 배경이라 로고를 어둡게 뒤집고 있었습니다.
+   Dark 에서는 로고 원본(흰색)이 그대로 맞습니다. */
+html[data-theme="dark"].auth-page .header .header__logo img,
+html[data-theme="dark"].mypage .header .header__logo img,
+html[data-theme="dark"].legal-page .header .header__logo img,
+html[data-theme="dark"].is-detail .header .header__logo img{filter:none}
+html[data-theme="dark"].auth-page .header .header__icon:hover,
+html[data-theme="dark"].mypage .header .header__icon:hover,
+html[data-theme="dark"].legal-page .header .header__icon:hover,
+html[data-theme="dark"].is-detail .header .header__icon:hover{background:rgba(255,255,255,.08)}
+/* (구 규칙 제거 — 위 §3-1b Download CTA 토큰이 Hover 를 담당합니다) */
+html[data-theme="dark"] .header__langmenu{background:var(--sp-menu-bg)}
+
+/* ── 3-3. Drawer ─────────────────────────────────────────────────────── */
+html[data-theme="dark"] .drawer{background:var(--bg)}
+
+/* ── 3-4. Focus ring ─────────────────────────────────────────────────── */
+html[data-theme="dark"] :focus-visible{outline-color:var(--ink)}
+
+/* ── 3-5. Back to Top (assets/sp-ui.js) ──────────────────────────────── */
+html[data-theme="dark"] .sptop{
+  background:rgba(30,33,38,.92);
+  border-color:rgba(255,255,255,.10);
+  box-shadow:0 4px 16px rgba(0,0,0,.40);
+  color:#F3F6FB;
+}
+@media (hover:hover){
+  html[data-theme="dark"] .sptop.is-on:hover{background:rgba(38,42,48,.98);color:#fff}
+}
+@media (max-width:767px){
+  html[data-theme="dark"] .sptop{background:rgba(30,33,38,.96)}
+}
+html[data-theme="dark"] .sptop:focus-visible{outline-color:#F3F6FB}
+
+/* ── 3-6. 공통 Dropdown / Select / Search (assets/sp-ui.js) ───────────── */
+html[data-theme="dark"] .spsel__btn,
+html[data-theme="dark"] .spsearch__inp{background:var(--sp-surface);color:var(--ink)}
+html[data-theme="dark"] .spsel__btn:disabled{background:#1A1D22;color:var(--sp-ink-2)}
+html[data-theme="dark"] .spsel__btn:focus-visible{box-shadow:0 0 0 3px rgba(255,255,255,.14)}
+html[data-theme="dark"] .spsel.is-err .spsel__btn{border-color:#FF8A80}
+html[data-theme="dark"] .spmenu{background:var(--sp-menu-bg)}
+html[data-theme="dark"] .spmenu__opt + .spmenu__cap{border-top-color:rgba(255,255,255,.08)}
+html[data-theme="dark"] .spmenu.is-sheet .spmenu__grip{background:rgba(255,255,255,.22)}
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder{color:rgba(243,246,251,.42)}
+
+/* ── 3-7. 계정 메뉴 (assets/sp-auth.js) ──────────────────────────────── */
+html[data-theme="dark"] .sp-menu{background:var(--sp-menu-bg)}
+html[data-theme="dark"] .sp-menu__nick{color:var(--ink)}
+html[data-theme="dark"] .sp-menu__mail,
+html[data-theme="dark"] .sp-menu__item--quiet{color:var(--body-2nd)}
+html[data-theme="dark"] .sp-av__btn img,
+html[data-theme="dark"] .sp-menu__id img,
+html[data-theme="dark"] .drawer__me img,
+html[data-theme="dark"] .mpav__img,
+html[data-theme="dark"] .wdwho__av{background:#2A3140}
+html[data-theme="dark"] .header.is-scrolled .sp-av__btn img,
+html[data-theme="dark"].auth-page .sp-av__btn img,
+html[data-theme="dark"].is-detail .sp-av__btn img,
+html[data-theme="dark"].mypage .sp-av__btn img{box-shadow:0 0 0 1.5px rgba(255,255,255,.18)}
+
+/* ── 3-8. Footer ─────────────────────────────────────────────────────── */
+html[data-theme="dark"] .footer{background:var(--band);border-top-color:rgba(255,255,255,.06)}
+html[data-theme="dark"] .footer__links a{color:var(--body-2)}
+html[data-theme="dark"] .footer__sns-a{color:var(--body)}
+@media (hover:hover){
+  html[data-theme="dark"] .footer__sns-a:hover{color:var(--ink)}
+}
+html[data-theme="dark"] .footer__sns-a:focus-visible{outline-color:var(--ink)}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   4. DARK — index.html
+   ══════════════════════════════════════════════════════════════════════════ */
+/* Hero · Cinematic — 원래 흰 무대였던 곳만 다크 base 로. 사진/영상은 원본 유지. */
+html[data-theme="dark"] .shero,
+html[data-theme="dark"] .shero__stage,
+html[data-theme="dark"] .cine{background:var(--bg)}
+/* 공간 섹션은 Light 에서도 이미 어둡습니다 — DIM 값을 다시 더 어둡게 하지 않습니다.
+   (배경 wash · 중앙 0% · 인접 30% · 외곽 40% 는 확정값 그대로) */
+
+/* 커뮤니티 카드 — 이미지 위 텍스트라 Light 와 동일하게 흰색을 유지합니다 */
+
+/* ══════════════════════════════════════════════════════════════════════════
+   5. DARK — world.html
+   ══════════════════════════════════════════════════════════════════════════ */
+html[data-theme="dark"] .wsearch,
+html[data-theme="dark"] .wicon,
+html[data-theme="dark"] .wcard__badge{background:var(--sp-surface);color:var(--ink)}
+html[data-theme="dark"] .wsearch:hover,
+html[data-theme="dark"] .wicon:hover{background:#262A31;border-color:rgba(255,255,255,.20)}
+/* 카드 — radius / size / hover interaction 은 그대로. 하단 정보 영역만 다크 표면 */
+html[data-theme="dark"] .wcard__shell{background:var(--sp-surface)}
+html[data-theme="dark"] .wcard__clip{background:#20242A}
+html[data-theme="dark"] .wcard--ip .wcard__clip{background:var(--ipbg, #20242A)}
+html[data-theme="dark"] .wcard__title{color:var(--ink)}
+html[data-theme="dark"] .wcard__meta{color:var(--wcard-desc)}   /* §서브텍스트 토큰 */
+
+/* ══════════════════════════════════════════════════════════════════════════
+   6. DARK — news.html
+   ══════════════════════════════════════════════════════════════════════════ */
+html[data-theme="dark"] .nselect,
+html[data-theme="dark"] .nsearch,
+html[data-theme="dark"] .nsearchbtn{background:var(--sp-surface);color:var(--ink)}
+html[data-theme="dark"] .ecard__clip,
+html[data-theme="dark"] .article__fig img,
+html[data-theme="dark"] .article--event .article__hero img,
+/* 이전/다음 공통 컴포넌트 — 색은 전부 토큰이라 여기서 한 번만 뒤집습니다
+   (assets/sp-pn.css · 공지/업데이트/이벤트/고객지원 공용) */
+html[data-theme="dark"]{
+  --pn-surface:#1B1F24;
+  --pn-surface-hover:#262A31;
+  --pn-line:rgba(255,255,255,.08);
+  --pn-cat-bg:rgba(94,158,224,.14);
+  --pn-cat-fg:#8FC2F5;
+  --pn-thumb-bg:#20242A;
+  /* 모바일 Full Menu divider */
+  --mnav-line:rgba(255,255,255,.12);
+
+  /* ── WORLD 배경 Semantic Color Family (Dark) ────────────────────
+     Light 토큰은 index.html :root 에 있습니다. 여기서 계열 6개만 뒤집으면
+     캐러셀 배경 전체가 따라옵니다(공간마다 색을 따로 두지 않습니다).
+     ⚠️ 검정 오버레이를 덧씌우는 방식이 아니라 "어두운 유채색"입니다.
+        순수 블랙(#000)으로 바꾸지 마세요 — 공간 아이덴티티가 사라집니다. */
+  --world-rose:#51383F;
+  --world-warm:#4D3F39;
+  --world-blue:#363F52;
+  --world-aqua:#394B4C;
+  --world-sage:#3F493B;
+  --world-neutral:#383838;
+  /* 바탕이 이미 어두우므로 dim 은 한 단계 낮춥니다 (HEX 는 그대로 두고 dim 만 조정) */
+  --wov:.10;
+}
+@media (max-width:767px){ html[data-theme="dark"]{ --wov:.14 } }
+html[data-theme="dark"] .share{background:var(--sp-surface-2);color:var(--ink)}
+html[data-theme="dark"] .share:hover{background:#2A2F36}
+/* 탭 — 선택은 Primary White, 비선택은 Secondary (구조·언더라인 위치는 그대로) */
+html[data-theme="dark"] .ntab[aria-selected="true"],
+html[data-theme="dark"] .stab[aria-selected="true"],
+html[data-theme="dark"] .wtab[aria-selected="true"]{color:var(--ink)}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   7. DARK — support.html
+   ══════════════════════════════════════════════════════════════════════════ */
+html[data-theme="dark"] .sselect,
+html[data-theme="dark"] .ssearch,
+html[data-theme="dark"] .ssearchbtn,
+html[data-theme="dark"] .form__field,
+html[data-theme="dark"] .filelist li{background:var(--sp-surface);color:var(--ink)}
+html[data-theme="dark"] .faq__mark{background:#2E343C;color:var(--ink)}
+html[data-theme="dark"] .faq__a{background:var(--sp-surface)}
+html[data-theme="dark"] .notice,
+html[data-theme="dark"] .detail__answer{background:var(--sp-surface);color:var(--body)}
+html[data-theme="dark"] .state{background:transparent}
+/* ── 9-b. 드라이버 카드 — Dark 전용 (Light 는 support.html 그대로) ────────
+   층위:  Page(--bg)  →  Card #191919  →  Info #0D0D0D  →  Button #444444
+   구분선을 쓰지 않고 표면 색만으로 로고 영역과 정보 영역을 가릅니다.
+
+   ⚠️ --drv-media 만 시안값(#191919)이 아니라 밝은 판입니다.
+      네 벤더 로고 PNG 의 잉크를 실측했습니다 (불투명 픽셀 기준):
+        drv-directx.png  평균 L 0.0   · 완전 검정 100%
+        drv-amd.png      평균 L 79.3  · 어두운 픽셀 73.1%
+        drv-nvidia.png   평균 L 112.1 · 어두운 픽셀 32.5%
+        drv-intel.png    평균 L 97.4  · 어두운 픽셀  1.0%
+      #191919(L≈25) 위에 얹으면 DirectX 는 완전히 사라지고 AMD 워드마크도
+      거의 읽히지 않습니다. 로고에 filter/색보정을 거는 것은 금지되어 있으므로
+      (§ "이미지에는 어떤 filter 도 걸지 않습니다") 로고 판만 밝게 남겼습니다.
+      밝은 색 로고 원본을 주시면 아래 한 줄만 #191919 로 바꾸면 됩니다. */
+html[data-theme="dark"]{
+  --drv-card:#191919;
+  --drv-card-line:rgba(255,255,255,.10);
+  --drv-media:#EDEFF2;
+  --drv-info:#0D0D0D;
+  --drv-name:#E5E5E5;
+  --drv-btn:#444444;
+  --drv-btn-hover:#505050;
+  --drv-btn-active:#3A3A3A;
+  --drv-btn-fg:#FFFFFF;
+  --drv-btn-line:rgba(255,255,255,.06);
+}
+html[data-theme="dark"] .drv{
+  background:var(--drv-card);
+  border-color:var(--drv-card-line);
+}
+html[data-theme="dark"] .drv__media{background:var(--drv-media)}
+/* 정보 영역 — divider 없이 색으로만 카드와 분리 */
+html[data-theme="dark"] .drv__body{background:var(--drv-info)}
+html[data-theme="dark"] .drv__name{color:var(--drv-name);opacity:1}
+html[data-theme="dark"] .drv__btn{
+  background:var(--drv-btn);
+  color:var(--drv-btn-fg);
+  border:1px solid var(--drv-btn-line);
+  transition:background-color 200ms var(--ease), transform 200ms var(--ease);
+}
+@media (hover:hover){
+  html[data-theme="dark"] .drv__btn:hover{background:var(--drv-btn-hover);color:var(--drv-btn-fg)}
+}
+html[data-theme="dark"] .drv__btn:active{background:var(--drv-btn-active);transform:scale(.99)}
+html[data-theme="dark"] .drv__btn:focus-visible{
+  outline:2px solid var(--drv-btn-fg);
+  outline-offset:2px;
+}
+@media (prefers-reduced-motion:reduce){
+  html[data-theme="dark"] .drv__btn{transition:background-color 200ms var(--ease)}
+  html[data-theme="dark"] .drv__btn:active{transform:none}
+}
+/* 다운로드 카드 — 브랜드 라이트 블루 배경은 그대로 유지합니다.
+   카드 안 텍스트/버튼도 Light 와 동일해야 대비가 맞습니다. */
+html[data-theme="dark"] .dl__card{background:#B3BED4}
+html[data-theme="dark"] .dl__card--mobile{background:#B3C5D4}
+html[data-theme="dark"] .dl__title,
+html[data-theme="dark"] .dl__note{color:#191F28}
+html[data-theme="dark"] .dl__btn{background:#171A21;color:#fff}
+html[data-theme="dark"] .dl__btn:hover{background:#333B45;color:#fff}
+/* 사양 표 — 배경은 투명, divider 는 공통 border 토큰(--line-rgb)이 처리합니다 */
+html[data-theme="dark"] .dl__table thead th,
+/* ── 플랜 비교표 — Dark 전용 토큰 ────────────────────────────────────────
+   ⚠️ 고쳐진 버그 두 가지
+     ① 선택 컬럼이 `#F4F8FD`(거의 흰색) 리터럴이라 다크에서 그 열만 밝게
+        떠 보였습니다 → 어두운 tint 로 바꿉니다.
+     ② sticky 헤더 배경이 transparent 라 스크롤 시 아래 행이 헤더 글자와
+        겹쳐 보였습니다 → 페이지 표면과 같은 계열의 **불투명** 색으로.
+   기능명 · 값 · 미지원값의 대비 계층도 여기서 한 번에 정합니다. */
+html[data-theme="dark"]{
+  --mx-head-bg:#1B1F24;                      /* 불투명 — sticky 겹침 방지 */
+  --mx-sel-bg:rgba(255,255,255,.055);        /* 밝은 회색 컬럼 금지 → 미세한 톤 차이 */
+  --mx-sel-line:rgba(255,255,255,.34);       /* 선택 컬럼 헤더 상단 2px */
+  --mx-row-hover:rgba(255,255,255,.03);
+  --mx-line:rgba(255,255,255,.08);
+  --mx-line-strong:rgba(255,255,255,.12);
+  --mx-val:rgba(255,255,255,.94);            /* 지원 값 — Primary */
+  --mx-off:rgba(255,255,255,.34);            /* 미지원 — Disabled */
+  --mx-key:rgba(255,255,255,.88);            /* 기능명 — Primary 에 가깝게 */
+  --mx-base:rgba(255,255,255,.78);           /* 값 셀 기본 — Secondary */
+}
+html[data-theme="dark"] .mpmatrix thead th{color:rgba(255,255,255,.94)}
+html[data-theme="dark"] .dl__table tbody td::before{color:var(--body-2nd)}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   8. DARK — auth.html · mypage.html (Form / Table / Modal)
+   ══════════════════════════════════════════════════════════════════════════ */
+html[data-theme="dark"] .inp,
+html[data-theme="dark"] .selct,
+html[data-theme="dark"] .mpsel,
+html[data-theme="dark"] .fld__side,
+html[data-theme="dark"] .chk__mark,
+html[data-theme="dark"] .wdreasons{background:var(--sp-surface);color:var(--ink)}
+html[data-theme="dark"] .inp:focus{background:var(--sp-surface);border-color:rgba(255,255,255,.32)}
+html[data-theme="dark"] .inp:disabled,
+html[data-theme="dark"] .inp--ro{background:#1A1D22;color:var(--body-2nd)}
+html[data-theme="dark"] .inp:-webkit-autofill,
+html[data-theme="dark"] .inp:-webkit-autofill:hover,
+html[data-theme="dark"] .inp:-webkit-autofill:focus{
+  -webkit-text-fill-color:var(--ink);
+  -webkit-box-shadow:0 0 0 1000px #1B1F24 inset;
+}
+html[data-theme="dark"] .fld__side:hover:not([disabled]){background:#262A31}
+html[data-theme="dark"] .chk input:checked + .chk__mark{background:var(--ink);border-color:var(--ink);color:#14171B}
+html[data-theme="dark"] .chk input:disabled + .chk__mark{background:#1A1D22}
+html[data-theme="dark"] .steps__i{background:#262A31;color:var(--body-2nd)}
+html[data-theme="dark"] .steps__bar{background:#262A31}
+
+/* Modal / Sheet / Toast — backdrop 은 더 깊게, surface 는 elevated */
+html[data-theme="dark"] .sheet__box,
+html[data-theme="dark"] .mpdlg__box{
+  background:var(--sp-elev);
+  box-shadow:0 24px 60px rgba(0,0,0,.60);
+}
+html[data-theme="dark"] .sheet__dim,
+html[data-theme="dark"] .mpdlg__dim{background:rgba(0,0,0,.66)}
+html[data-theme="dark"] .mptoast{background:var(--sp-elev);color:var(--ink);box-shadow:0 12px 34px rgba(0,0,0,.50)}
+
+/* My Page 표면 계층 */
+html[data-theme="dark"] .mpasset,
+html[data-theme="dark"] .mpstat,
+html[data-theme="dark"] .mpplan,
+html[data-theme="dark"] .mpcard-pm,
+html[data-theme="dark"] .mppm__row{background:var(--sp-surface)}
+html[data-theme="dark"] .mpsub-card,
+html[data-theme="dark"] .mpbox,
+html[data-theme="dark"] .wdwho,
+html[data-theme="dark"] .wdbox,
+html[data-theme="dark"] .wdchk__d,
+html[data-theme="dark"] .mpempty{background:var(--sp-surface-2)}
+html[data-theme="dark"] .mppm__row:not(.is-off):hover{background:#262A31;border-color:rgba(255,255,255,.26)}
+html[data-theme="dark"] .mppm__row.is-off{background:#191C21}
+html[data-theme="dark"] .mpplan.is-current{border-color:var(--ink);background:#20242A}
+html[data-theme="dark"] .mpasset__mark{background:#2A3140;color:#C7D2E4}
+html[data-theme="dark"] .mpcard-pm__chip{background:linear-gradient(135deg,#39414F,#2A303B)}
+html[data-theme="dark"] .wdmore:hover{color:var(--ink)}
+/* Badge tint — Dark 에서 읽히는 톤으로만 조정, 의미(색상 역할)는 그대로 */
+html[data-theme="dark"] .mpbadge--info{background:rgba(90,150,235,.16);color:#9CC2F5}
+html[data-theme="dark"] .mpbadge--ok{background:rgba(95,214,155,.14);color:#7FE0B2}
+html[data-theme="dark"] .mpbadge--warn,
+html[data-theme="dark"] .mpbadge--wait{background:rgba(240,178,90,.14);color:#F0C179}
+html[data-theme="dark"] .mpbadge--err{background:rgba(255,138,128,.14);color:#FF9D94}
+html[data-theme="dark"] .mpbadge--mute{background:rgba(255,255,255,.07);color:var(--body-2nd)}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   9. DARK — 미세 조정
+   ══════════════════════════════════════════════════════════════════════════ */
+/* Dark 에서는 blur 가 더 번져 보입니다 — reveal blur 만 한 단계 낮춥니다.
+   이동 거리 · 시간 · easing 은 Light 와 완전히 동일합니다. */
+html[data-theme="dark"] .js .r-line--soft > span{filter:blur(5px)}
+@media (max-width:767px){
+  html[data-theme="dark"] .js .r-line--soft > span{filter:blur(3.5px)}
+}
+html[data-theme="dark"] .js .is-in .r-line--soft > span{filter:blur(0)}
+
+/* 그림자는 최소화하고 표면 대비 + 테두리로 층을 표현합니다 */
+html[data-theme="dark"] .wcard__shell,
+html[data-theme="dark"] .drv,
+html[data-theme="dark"] .mpasset,
+html[data-theme="dark"] .mpstat{box-shadow:none}
+
+/* 이미지에는 어떤 filter 도 걸지 않습니다 — 사진·캐릭터·게임 공간 원본 유지 */
+html[data-theme="dark"] img,
+html[data-theme="dark"] video{filter:none}
+
+/* ══ 10. DARK — Disabled state ════════════════════════════════════════════
+   Light 에서는 흰 바탕 위 opacity 만으로 충분했지만, Dark 에서는 밝은 버튼을
+   흐리게 만들면 회색 덩어리처럼 떠 보입니다.
+   Disabled 는 "표면으로 가라앉히고 글자를 36% 로" 처리합니다. */
+html[data-theme="dark"] .abtn[disabled],
+html[data-theme="dark"] .mpbtn[disabled],
+html[data-theme="dark"] .sbtn[disabled],
+html[data-theme="dark"] .dl__btn[disabled],
+html[data-theme="dark"] .drv__btn[disabled]{
+  opacity:1;
+  background:#242830;
+  color:rgba(243,246,251,.36);
+  border-color:rgba(255,255,255,.08);
+}
+html[data-theme="dark"] .fld__side[disabled],
+html[data-theme="dark"] .mpbtn-s[disabled]{opacity:1;background:#1A1D22;color:rgba(243,246,251,.34)}
+html[data-theme="dark"] .spsel__btn:disabled{opacity:1;color:rgba(243,246,251,.36)}
+
+/* ══ 11. DARK — 이미지 위 텍스트 ═════════════════════════════════════════
+   Light 와 동일한 값입니다. Dark 라고 이미지를 더 어둡게 만들지 않습니다.
+   (공간 섹션의 확정 DIM 값 · hero overlay · 카드 위 흰 텍스트 전부 그대로)   */
+html[data-theme="dark"] .phero__title,
+html[data-theme="dark"] .card__title,
+html[data-theme="dark"] .card__desc,
+html[data-theme="dark"] .cine__copy,
+html[data-theme="dark"] #worlds .section-title,
+html[data-theme="dark"] #worlds .worlds__name{color:#fff}

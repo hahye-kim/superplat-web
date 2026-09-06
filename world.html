@@ -1,0 +1,2153 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+<!-- Theme runtime — 첫 페인트 전에 data-theme 을 확정합니다 (FOUC 방지).
+     ⚠️ defer / async 금지: 페이지 <style> 보다 먼저 동기 실행되어야 합니다. -->
+<script src="assets/sp-theme.js"></script>
+
+<!-- i18n runtime — 첫 페인트 전에 <html lang> 을 확정합니다.
+     ⚠️ defer / async 금지: 본문을 JS 로 그리는 페이지가 있습니다. -->
+<script src="assets/sp-i18n.js"></script>
+<!-- WORLD 공간 데이터 (홈 캐러셀 · WORLD & IP 공용 Single Source of Truth) -->
+<script src="assets/sp-worlds.js"></script>
+<title>World &amp; IP — SuperPlat</title>
+<meta name="description" content="새로 열린 공간과 새로 합류한 캐릭터를 만나보세요. SuperPlat의 월드와 IP 캐릭터를 한곳에서 둘러볼 수 있습니다.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23191F28'/%3E%3Ctext x='16' y='22' font-size='16' font-family='serif' font-weight='700' fill='%23fff' text-anchor='middle'%3ES%3C/text%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="assets/fonts/PretendardVariable.woff2" crossorigin>
+<style>
+/* ══ Pretendard Variable (OFL 1.1 · assets/fonts/LICENSE.txt) ══════════
+   사이트 전체가 이 한 벌만 씁니다. weight 100~900 을 하나의 파일이 커버하므로
+   400/500/600/700 을 자유롭게 쓰면서도 요청 수는 1개입니다.
+   ⚠️ CDN 을 먼저 두는 이유: index.html 을 그냥 더블클릭해 열면(file://) 브라우저가
+      로컬 폰트 파일을 CORS 로 막습니다. CDN 은 file:// 에서도 로드됩니다.
+      서버(localhost·GitHub Pages 등)로 열면 로컬 사본이 오프라인에서도 동작합니다. */
+@font-face{
+  font-family:'Pretendard Variable';
+  font-style:normal;
+  font-weight:100 900;
+  font-display:swap;
+  src:url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/woff2/PretendardVariable.woff2') format('woff2-variations'),
+      url('assets/fonts/PretendardVariable.woff2') format('woff2-variations');
+}
+</style>
+
+<!-- Hero pair is above the fold and must not pop in mid-transition -->
+<link rel="preload" as="image" href="assets/world-hero.png" fetchpriority="high">
+<link rel="preload" as="image" href="assets/world-vod.jpg">
+
+<script>document.documentElement.classList.add('js');</script>
+
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   SuperPlat — HOME
+   시안: PC 1920 / Mobile 375 (Figma) · Hero reveal: index-standalone_2_1.html
+   ───────────────────────────────────────────────────────────────────
+   구성
+     00 Reset / Tokens
+     01 Layout primitives
+     02 Header + Mobile drawer
+     03 Hero (dual-image activation + brush reveal)
+     04 Character marquee
+     05 World carousel
+     06 Cinematic scroll
+     07 Community cards
+     08 Final CTA + Footer
+     09 Reveal / reduced-motion
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── 00 Reset ──────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scrollbar-gutter:stable}
+body,h1,h2,h3,p,figure,ul,li{margin:0;padding:0}
+ul{list-style:none}
+/* ⚠️ height:auto 필수 — width/height 속성이 붙은 img 에 CSS width 만 주면
+   브라우저가 속성 height 를 그대로 써서 이미지가 눌립니다 (CTA 캐릭터 찌그러짐 원인) */
+img{display:block;max-width:100%;height:auto}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+:focus-visible{outline:2px solid #191F28;outline-offset:3px;border-radius:4px}
+.hero :focus-visible,.cta :focus-visible{outline-color:#fff}
+.br-m{display:none}
+@media (max-width:767px){.br-m{display:inline}}
+.sr{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* ── 00 Tokens ─────────────────────────────────────────────────── */
+:root{
+  /* color — 시안 실측 (title #191F28 = TDS grey900) */
+  /* ── 테마 채널 토큰 ────────────────────────────────────────────────
+     사이트 전체의 "잉크색 반투명"(테두리 · divider · 보조 텍스트 · 미세 배경)은
+     전부 rgba(var(--ink-rgb), α) 형태로만 씁니다. Dark 에서 이 채널 하나만
+     바꾸면 수백 개 규칙이 한 번에 따라옵니다. 알파(=계층)는 그대로 유지됩니다.
+     --line-rgb 는 border / outline 전용 채널입니다 (그림자·이미지 DIM 은 제외). */
+  --ink-rgb:23,26,33;
+  --line-rgb:0,0,0;
+
+  --ink:#191F28;
+  --ink-soft:#333B45;
+  /* ⚠️ Light 보조 텍스트 계단을 한 단계씩 올렸습니다.
+     실측: 예전 --body-2nd(.46) 는 흰 배경에서 2.97 : 1 로 WCAG AA(4.5)에
+     한참 못 미쳤고, 사이트 전체의 캡션 · 메타 · 도움말이 이 토큰을 씁니다.
+       .46 → 2.97   .64 → 5.22 ✔ (연회색 표면에서도 4.9 이상)
+       .62 → 4.88   .70 → 6.42 ✔
+       .68 → 5.83   .78 → 7.78 ✔
+     세 단계의 순서와 간격은 그대로 유지하면서 전부 AA 를 넘깁니다.
+     Dark 는 sp-theme.css 에서 이미 5.9 : 1 이상이라 건드리지 않았습니다. */
+  --body:rgba(var(--ink-rgb),.70);
+  --body-2nd:rgba(var(--ink-rgb),.64);
+  --body-2:rgba(var(--ink-rgb),.78);
+  --white:#fff;
+  --bg:#fff;
+  --bg-gray:#F5F5F6;   /* Section 03 */
+  --card:#F7F7F7;      /* Section 05 card default */
+  --card-left:#DAE6FF; /* Section 05 hover A */
+  --card-right:#FFE9C3;/* Section 05 hover B */
+  --band:#F2F3F6;      /* Final CTA band */
+  --line:rgba(var(--line-rgb),.07);
+  --accent:#FF7A18;    /* hero activation glow (원본 이미지의 orange) */
+
+  /* layout */
+  --gutter:clamp(20px, 4vw, 80px);
+  --container:min(1400px, 100% - 2 * var(--gutter));
+  --container-wide:min(1440px, 100% - 2 * var(--gutter));
+  --header-h:clamp(66px, calc(56px + 1.25vw), 80px);   /* 1920:80 · 1600:76 · 1440:74 · 1280:72 · 1024:68.8 · 768:66 */
+  --r-card:16px;
+  --r-media:20px;
+  /* 콘텐츠 카드 슬롯 공통 라운드 — World & IP 카드가 이 토큰 하나만 씁니다.
+     같은 카드 컴포넌트를 다른 페이지에서 재사용할 때도 이 값을 그대로 쓰면
+     카드마다 라운드가 달라지는 일이 생기지 않습니다. (PC 24 / 모바일 16) */
+  --radius-card:24px;
+
+  /* ══ SPACING TOKENS ══════════════════════════════════════════════
+     ⚠️ 섹션·블록 여백은 반드시 아래 토큰만 씁니다. 임의의 margin 금지.
+
+     token                @375  @1024  @1440  @1920  용도
+     space-section-sm      76     80     112    148   보조 섹션 (CTA 하단 등)
+     space-section-md      96     96     135    180   표준 섹션
+     space-section-lg     112    118    166    220   스토리텔링 섹션
+     space-section-xl     124    128    180    240   cinematic pause
+     space-content-sm      12     14     18      18   라벨 ↔ 값
+     space-content-md      20     22     30      36   제목 ↔ 본문
+     space-content-lg      36     40     56      72   텍스트 ↔ 비주얼          */
+  --space-section-sm:clamp(76px, 7.8vw, 148px);
+  --space-section-md:clamp(96px, 9.4vw, 180px);
+  --space-section-lg:clamp(112px, 11.5vw, 220px);
+  --space-section-xl:clamp(124px, 12.5vw, 240px);
+  --space-content-sm:clamp(12px, 1vw, 18px);
+  --space-content-md:clamp(20px, 2.1vw, 36px);
+  --space-content-lg:clamp(36px, 3.9vw, 72px);
+  /* 의미 기반 별칭 — 섹션에서는 이 이름을 씁니다 */
+  --space-title-to-body:var(--space-content-md);
+  --space-text-to-media:var(--space-content-lg);
+
+  /* ── motion tokens ──────────────────────────────────────────────
+     사이트 전체 애니메이션은 이 6개 값만 씁니다. 개별 하드코딩 금지.
+       fast     220~300  micro interaction (hover / press)
+       normal   450~650  UI 상태 전환
+       reveal   700~900  텍스트·카드 등장
+       cinematic 900~1200 큰 비주얼
+     motion hierarchy: headline > body > image > cards > buttons > 장식(정지) */
+  --ease:cubic-bezier(.16,1,.3,1);       /* primary */
+  --ease-soft:cubic-bezier(.22,1,.36,1); /* subtle  */
+  --t-fast:260ms;
+  --t-normal:560ms;
+  --t-reveal:820ms;
+  --t-cine:1050ms;
+  --stagger:80ms;
+  --rv-y:28px;                            /* reveal 이동 거리 */
+  --t-micro:var(--t-fast);                /* 기존 사용처 호환 */
+  --t-ui:360ms;
+
+  /* ══ TYPOGRAPHY TOKENS ═══════════════════════════════════════════
+     Pretendard 하나로 운영하는 공통 스케일입니다.
+     ⚠️ 섹션에서 font-size 를 새로 만들지 말고 반드시 이 토큰을 재사용하세요.
+        (.t-* 유틸리티 클래스로도 그대로 쓸 수 있습니다)
+
+     token           @375  @1440  @1920   용도
+     display-xl       40     72     84    Hero
+     display-lg       34     54     64    영상 statement
+     heading-1        30     48     56    섹션 타이틀
+     heading-2        24     34     40    서브 섹션 / Final CTA
+     heading-3        20     24     28    카드·피처 타이틀
+     title            19     22     24    공간명
+     body-lg          16     18     20    섹션 본문
+     body-md          15     17     18    카드 본문
+     body-sm          13     14     15    보조 설명
+     caption          12     13     13    메타 / 카운터              */
+  --font-display-xl:clamp(40px, 5vw, 84px);
+  --font-display-lg:clamp(34px, calc(24px + 2.083vw), 64px);
+  --font-heading-1:clamp(33px, calc(24px + 1.667vw), 56px);   /* @375 33 · @1440 48 · @1920 56 */
+  --font-heading-2:clamp(28px, calc(17px + 1.2vw), 40px);
+  --font-heading-3:clamp(20px, calc(13.5px + .75vw), 28px);
+  --font-title:clamp(19px, calc(15.5px + .44vw), 24px);
+  --font-body-lg:clamp(16px, calc(12.6px + .385vw), 20px);
+  --font-body-md:clamp(15px, calc(12.9px + .265vw), 18px);
+  --font-body-sm:clamp(13px, calc(11.5px + .18vw), 15px);
+  --font-caption:clamp(12px, calc(11.3px + .09vw), 13px);
+  --font-nav:clamp(14px, .8vw, 15px);
+  --font-nav-2:clamp(13px, .74vw, 14px);
+  --font-btn:clamp(15px, .88vw, 17px);
+
+  /* 자간 — 한글 제목은 과하게 조이지 않습니다 */
+  --ls-display:-.04em;
+  --ls-heading:-.03em;
+  --ls-body:-.012em;
+
+  /* 기존 이름 호환 (내부 참조용) */
+  --fs-h1:var(--font-display-xl);
+  --fs-h2:var(--font-heading-1);
+  --fs-stmt:var(--font-display-lg);
+  --fs-feature:var(--font-heading-3);
+  --fs-desc:var(--font-body-lg);
+  --fs-body:var(--font-body-md);
+  --fs-lead:var(--font-body-lg);
+  --fs-nav:var(--font-nav);
+  --fs-label:var(--font-caption);
+}
+
+/* 모바일 — 같은 motion language 를 유지하되 이동 거리·간격만 가볍게 (§27) */
+@media (max-width:767px){
+  :root{--rv-y:20px;--stagger:60ms;--t-cine:900ms;--radius-card:16px}
+}
+
+/* 2K·4K — 콘텐츠가 우표처럼 작아 보이지 않도록 한 단계만 완만하게 올립니다.
+   (1400 기준은 유지, 상한만 1600. 이미지/타이포가 무한정 커지지는 않습니다) */
+@media (min-width:2200px){
+  :root{
+    /* 콘텐츠 폭은 1400 으로 고정하고, 남는 공간은 전부 여백으로 흘려보냅니다 */
+    --gutter:clamp(96px, 5vw, 260px);
+    --container:min(1400px, 100% - 2 * var(--gutter));
+    --container-wide:min(1440px, 100% - 2 * var(--gutter));
+    --cine-max:1600px;
+    --font-display-xl:clamp(84px, 2.6vw, 100px);
+    --font-display-lg:clamp(64px, 2vw, 76px);
+    --font-heading-1:clamp(56px, 1.75vw, 66px);
+    --font-heading-2:clamp(40px, 1.25vw, 48px);
+    --font-heading-3:clamp(28px, .88vw, 34px);
+    --font-title:clamp(24px, .75vw, 29px);
+    --font-body-lg:clamp(20px, .62vw, 24px);
+    --font-body-md:clamp(18px, .56vw, 21px);
+    --font-body-sm:clamp(15px, .47vw, 18px);
+    --font-caption:clamp(13px, .41vw, 16px);
+    --font-nav:clamp(15px, .47vw, 18px);
+    --font-nav-2:clamp(14px, .44vw, 17px);
+    --font-btn:clamp(17px, .53vw, 20px);
+    --header-h:80px;                       /* 2200+ 에서도 90px 을 넘기지 않습니다 */
+  }
+}
+
+body{
+  font-family:'Pretendard Variable','Pretendard',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,'Apple SD Gothic Neo',sans-serif;
+  font-size:var(--font-body-md);
+  line-height:1.65;
+  color:var(--ink);
+  background:var(--bg);
+  word-break:keep-all;
+  overflow-wrap:break-word;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  font-feature-settings:'tnum' 0;
+}
+body.is-locked{overflow:hidden;touch-action:none}
+/* 모바일 — 인접 섹션 합산 여백이 한 화면을 덮지 않도록 한 단계 압축 */
+@media (max-width:767px){
+  :root{
+    --space-section-sm:72px;
+    --space-section-md:92px;          /* 섹션 상단 88~104 */
+    --space-section-lg:96px;
+    --space-section-xl:108px;
+    --space-content-md:clamp(20px, 5.6vw, 24px);   /* 제목 → 본문 20~24 */
+    --space-content-lg:clamp(36px, 10.4vw, 44px);  /* 본문 → 비주얼 36~44 */
+  }
+}
+
+/* ── 01 Layout primitives ──────────────────────────────────────── */
+/* ── Typography utilities — 어디서든 이 클래스만으로 위계를 맞출 수 있습니다 ── */
+.t-display-xl{font-size:var(--font-display-xl);font-weight:700;line-height:1.12;letter-spacing:var(--ls-display)}
+.t-display-lg{font-size:var(--font-display-lg);font-weight:700;line-height:1.15;letter-spacing:-.035em}
+.t-heading-1{font-size:var(--font-heading-1);font-weight:700;line-height:1.15;letter-spacing:var(--ls-heading)}
+.t-heading-2{font-size:var(--font-heading-2);font-weight:700;line-height:1.2;letter-spacing:-.025em}
+.t-heading-3{font-size:var(--font-heading-3);font-weight:700;line-height:1.3;letter-spacing:-.02em}
+.t-title{font-size:var(--font-title);font-weight:700;line-height:1.35;letter-spacing:-.02em}
+.t-body-lg{font-size:var(--font-body-lg);font-weight:400;line-height:1.65;letter-spacing:var(--ls-body)}
+.t-body-md{font-size:var(--font-body-md);font-weight:400;line-height:1.65;letter-spacing:var(--ls-body)}
+.t-body-sm{font-size:var(--font-body-sm);font-weight:400;line-height:1.6;letter-spacing:-.008em}
+.t-caption{font-size:var(--font-caption);font-weight:500;line-height:1.5;letter-spacing:0}
+/* 숫자 UI — 폭이 흔들리지 않게 */
+.t-num{font-variant-numeric:tabular-nums;font-weight:500}
+
+.wrap{width:var(--container);margin-inline:auto}
+.wrap--wide{width:var(--container-wide);margin-inline:auto}
+
+.section-head{max-width:none}
+.section-title{
+  font-size:var(--font-heading-1);
+  line-height:1.15;
+  letter-spacing:var(--ls-heading);
+  font-weight:700;
+  color:var(--ink);
+}
+.section-desc{
+  margin-top:var(--space-title-to-body);   /* 제목 ↔ 본문 20 → 36px */
+  max-width:700px;                      /* 본문은 넓게 읽히되 700px 이내 */
+  font-size:var(--font-body-lg);
+  font-weight:400;
+  line-height:1.65;
+  color:var(--body);
+  letter-spacing:var(--ls-body);
+}
+.section-desc br{display:inline}
+@media (max-width:767px){
+  /* 제목은 시안대로 2줄 — 화면마다 줄바꿈이 달라지지 않게 폭을 잡아 둡니다 */
+  .section-title{line-height:1.18;max-width:15ch}
+}
+
+/* 섹션 세로 리듬 — 1920 시안 실측을 vw로 환산 */
+/* 섹션 세로 리듬 — 기계적으로 같은 값이 아니라 콘텐츠 무게에 따라 3단계 */
+.s-white{padding-block:var(--space-section-md) var(--space-section-lg)}   /* 캐릭터 */
+.s-gray{background:var(--bg-gray);padding-block:var(--space-section-md) var(--space-section-lg)} /* 공간 */
+.s-cards{padding-block:var(--space-section-lg) var(--space-section-md)}   /* 커뮤니티 */
+
+/* ── 02 Header ─────────────────────────────────────────────────── */
+.header{
+  position:fixed;
+  inset:0 0 auto;
+  z-index:200;
+  /* SMART HEADER — 스크롤 방향에 따라 위로 접힙니다.
+     ⚠️ display / DOM 조작이 아니라 transform 만 씁니다. fixed 오버레이라
+        본문 레이아웃은 그대로여서 layout shift(CLS)가 생기지 않습니다. */
+  transform:translate3d(0,0,0);
+  will-change:transform;
+  transition:background-color var(--t-ui) var(--ease), box-shadow var(--t-ui) var(--ease),
+             backdrop-filter var(--t-ui) var(--ease), transform 320ms var(--ease);
+}
+html .header.is-hidden{transform:translate3d(0,-100%,0)}
+@media (prefers-reduced-motion:reduce){
+  .header{transition-duration:1ms, 1ms, 1ms, 1ms}
+}
+.header__inner{
+  /* ⚠️ 본문과 같은 1400 Grid — 헤더만 1440 을 쓰면 로고·CTA 가 본문보다 20px 씩
+     바깥으로 밀려 나갑니다(실측). 같은 축을 쓰도록 --container 로 맞췄습니다. */
+  width:var(--container);
+  margin-inline:auto;
+  height:var(--header-h);
+  /* 1fr · auto · 1fr — 좌우 칸이 같은 폭이라 메뉴가 컨테이너 정중앙에 놓입니다.
+     (로고 폭과 유틸리티 폭이 달라도 메뉴 축은 흔들리지 않습니다) */
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  align-items:center;
+  column-gap:clamp(20px,2vw,40px);
+}
+.header__logo{grid-column:1;justify-self:start;display:flex;align-items:center;min-height:44px}
+.header__logo img{
+  /* ⚠️ 높이가 아니라 폭 기준입니다.
+     원본 366×132 안에 좌우 15/12px, 상하 9px 의 투명 여백이 있어서
+     "보이는 로고 폭"은 지정 폭의 약 92.6% 입니다.
+     106px → 실제 시각 폭 98px (요청 90~104 구간). 비율은 건드리지 않습니다. */
+  width:clamp(99px, calc(83px + 2.083vw), 123px);
+  height:auto;
+  transition:filter var(--t-ui) var(--ease);
+}
+.header__nav{grid-column:2;justify-self:center;display:flex;align-items:center;gap:clamp(28px, calc(4px + 2.083vw), 44px)}   /* 1920:44 · 1600:37 · 1440:34 · 1280:30.7 · 1024:28 */
+.header__link{
+  position:relative;
+  font-size:clamp(14px, calc(12.5px + .156vw), 15.5px);  /* 1920:15.5 · 1440:14.8 · 1280:14.5 · 1024:14.1 */
+  font-weight:600;                                       /* SemiBold — 로고보다 한 단계 낮은 위계 */
+  letter-spacing:-.01em;
+  color:var(--white);
+  padding:6px 2px;
+  transition:opacity var(--t-micro) var(--ease), color var(--t-ui) var(--ease);
+}
+.header__link::after{
+  content:'';
+  position:absolute;
+  left:2px;right:2px;bottom:2px;
+  height:1px;
+  background:currentColor;
+  transform:scaleX(0);
+  transform-origin:left center;
+  transition:transform 220ms var(--ease);
+}
+.header__link:hover{opacity:.72}
+.header__link:hover::after{transform:scaleX(1)}
+
+/* ⚠️ 헤더 텍스트에는 그림자를 쓰지 않습니다 (요청).
+   사진 위 가독성은 Weight 600 · 흰색 · 스크롤 후 흰 배경 대비로만 확보합니다.
+   Hover / Active / Sticky / Smart Header 어느 상태에서도 그림자가 생기지 않도록
+   아래에서 명시적으로 none 을 못 박아 둡니다. */
+.header,.header *{text-shadow:none}
+.header__link,.header__link:hover,.header__link:active,.header__link:focus,
+.header__icon,.header__icon svg,.header__burger,.header__burger span,
+.header__langmenu button,.btn-download,.btn-download:hover,
+.header__login,.sp-av__btn{text-shadow:none;filter:none}
+/* 로고 이미지의 반전 필터는 그대로 둡니다 (그림자가 아니라 색 처리입니다) */
+.header.is-scrolled .header__logo img,.is-menu .header__logo img{filter:invert(1) brightness(.16)}
+
+.header__actions{grid-column:3;justify-self:end;display:flex;align-items:center;gap:clamp(12px,1.05vw,20px)}
+.header__icon{
+  width:42px;height:42px;              /* 히트 영역 — 아이콘은 작게, 누를 곳은 넉넉하게 */
+  display:grid;place-items:center;
+  border-radius:999px;
+  color:var(--white);
+  transition:background-color var(--t-micro) var(--ease), color var(--t-ui) var(--ease), opacity var(--t-micro) var(--ease);
+}
+.header__icon svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.6}
+/* ── Header utility icons — Bootstrap Icons(fill 기반) ────────────────
+   ⚠️ Bootstrap Icons 는 stroke 가 아니라 fill 로 그려집니다.
+      기존 stroke 규칙을 그대로 두면 아이콘이 보이지 않으므로 여기서 뒤집습니다.
+
+   Optical size — "박스 크기"가 아니라 "실제로 보이는 크기"를 맞춥니다.
+     globe2      path 가 16 뷰박스를 꽉 채움  → 보이는 크기 = 박스 크기
+     person-fill path bbox 가 12/16 = 75%    → 박스 × 0.75 가 보이는 크기
+   그래서 두 아이콘의 박스 크기를 일부러 다르게 줍니다.
+     Desktop  globe 18.5px      · person 24px(=18px 로 보임)
+     Mobile   globe 20px        · person 26.5px(=19.9px 로 보임)          */
+.header__icon .ic{stroke:none;fill:currentColor;display:block}
+.header__icon .ic--globe{width:18.5px;height:18.5px}
+.header__icon .ic--person{width:24px;height:24px}
+.header__icon:hover{background:rgba(255,255,255,.14)}
+.header__lang{position:relative}
+/* 언어 드롭다운 — 공통 Dropdown System(assets/sp-ui.js)의 surface / option 토큰을
+   그대로 씁니다. 헤더 메뉴와 페이지 안의 Select 메뉴가 같은 표면·같은 리듬을 갖도록.
+   토큰이 없는 환경(스크립트 미로딩)에서도 기존 값으로 떨어지게 fallback 을 둡니다. */
+.header__langmenu{
+  position:absolute;top:calc(100% + 8px);right:0;
+  min-width:118px;padding:var(--sp-menu-pad,7px);
+  background:var(--sp-menu-bg,#fff);border-radius:var(--sp-menu-r,14px);
+  box-shadow:var(--sp-menu-sh,0 10px 30px rgba(0,0,0,.08), 0 0 0 1px rgba(var(--ink-rgb),.05));
+  opacity:0;visibility:hidden;transform:translateY(-6px);
+  transition:opacity var(--sp-pop-out,160ms) var(--sp-ease,cubic-bezier(.16,1,.3,1)),
+             transform var(--sp-pop-out,160ms) var(--sp-ease,cubic-bezier(.16,1,.3,1)),
+             visibility var(--sp-pop-out,160ms);
+}
+.header__lang.is-open .header__langmenu{
+  opacity:1;visibility:visible;transform:none;
+  transition-duration:var(--sp-pop-in,220ms);
+}
+.header__langmenu button{
+  display:flex;align-items:center;width:100%;text-align:left;
+  min-height:var(--sp-opt-h,42px);
+  padding:0 12px;border-radius:var(--sp-opt-r,9px);
+  font-size:var(--font-nav-2);font-weight:500;color:var(--sp-ink,var(--ink));
+  transition:background-color var(--t-micro) var(--ease);
+}
+.header__langmenu button:hover{background:var(--sp-opt-hover,rgba(var(--ink-rgb),.045))}
+.header__langmenu button[aria-current='true']{font-weight:700;background:var(--sp-opt-sel,rgba(var(--ink-rgb),.06))}
+
+.btn-download{
+  display:inline-flex;align-items:center;justify-content:center;
+  height:clamp(38px, calc(32px + .52vw), 42px);   /* 1920:42 · 1440:39.5 · 1024:38 */
+  padding:0 clamp(16px,1.15vw,22px);
+  border-radius:999px;                            /* pill — height 42 기준 radius 21 */
+  background:var(--white);
+  color:var(--ink);
+  font-size:clamp(14px, calc(12.5px + .13vw), 15px);
+  font-weight:600;
+  letter-spacing:-.01em;
+  white-space:nowrap;
+  transition:background-color var(--t-ui) var(--ease), transform var(--t-micro) var(--ease), color var(--t-ui) var(--ease);
+}
+.btn-download:hover{transform:scale(1.015);background:#EFEFEF}
+.btn-download:active{transform:scale(.97)}
+
+/* 스크롤 후 — 흰 배경 + blur + 다크 텍스트 */
+.header.is-scrolled{
+  background:rgba(255,255,255,.94);
+  -webkit-backdrop-filter:saturate(180%) blur(14px);
+  backdrop-filter:saturate(180%) blur(14px);
+  box-shadow:0 1px 0 rgba(0,0,0,.06);          /* 강한 회색 선 대신 아주 미세한 divider */
+}
+.header.is-scrolled .header__logo img{filter:invert(1) brightness(.16)}
+.header.is-scrolled .header__link,
+.header.is-scrolled .header__icon,
+.header.is-scrolled .header__burger{color:var(--ink)}
+.header.is-scrolled .header__icon:hover{background:rgba(0,0,0,.05)}
+.header.is-scrolled .btn-download{background:var(--ink);color:#fff}
+.header.is-scrolled .btn-download:hover{background:#333B45}
+
+/* 드로어가 열리면 헤더는 흰 배경 위에 놓입니다 — 로고·햄버거를 다크로 */
+.is-menu .header{background:transparent;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+.is-menu .header__logo img{filter:invert(1) brightness(.16)}
+.is-menu .header__link,
+.is-menu .header__icon,
+.is-menu .header__burger{color:var(--ink)}
+
+/* 햄버거 — 44×44 히트 영역, 실제 선은 24×1.75px / gap 6px */
+.header__burger{
+  display:none;
+  width:44px;height:44px;
+  margin-right:-10px;
+  /* ⚠️ grid + place-items 는 암시적 row 가 44px 안에서 stretch 되어
+     선 간격이 6px 이 아니라 16px 이 됩니다 → X 변환이 어긋납니다.
+     flex column + gap 으로 간격을 결정론적으로 고정합니다. */
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  color:var(--white);
+  border-radius:12px;
+  transition:background-color var(--t-micro) var(--ease), color var(--t-ui) var(--ease);
+}
+.header__burger:hover,
+.header__burger:active{background:rgba(255,255,255,.12)}
+.header.is-scrolled .header__burger:hover,
+.header.is-scrolled .header__burger:active,
+.is-menu .header__burger:hover,
+.is-menu .header__burger:active{background:rgba(0,0,0,.04)}
+.header__burger span{
+  display:block;width:24px;height:1.75px;border-radius:2px;background:currentColor;
+  transform-origin:center;
+  transition:transform 260ms var(--ease), opacity 180ms var(--ease);
+}
+/* 3줄 총높이 17.25px → 바깥 두 줄의 중심 이동량 7.75px */
+.is-menu .header__burger span:nth-child(1){transform:translateY(7.75px) rotate(45deg)}
+.is-menu .header__burger span:nth-child(2){opacity:0}
+.is-menu .header__burger span:nth-child(3){transform:translateY(-7.75px) rotate(-45deg)}
+
+/* 모바일 드로어 */
+.drawer{
+  position:fixed;inset:0;z-index:190;
+  background:#fff;
+  padding:calc(var(--header-h) + 24px) var(--gutter) calc(env(safe-area-inset-bottom) + 32px);
+  display:flex;flex-direction:column;
+  opacity:0;visibility:hidden;
+  transform:translateY(-14px);
+  transition:opacity 340ms var(--ease), transform 380ms var(--ease), visibility 380ms;
+}
+.is-menu .drawer{opacity:1;visibility:visible;transform:none}
+.drawer__nav{display:flex;flex-direction:column;gap:4px}
+.drawer__nav a{
+  font-size:clamp(24px,7vw,30px);
+  font-weight:700;
+  letter-spacing:-.035em;
+  color:var(--ink);
+  padding:12px 0;
+  opacity:0;transform:translateY(20px);
+}
+/* 배경 → 내비게이션 타이포 → 보조 액션 순으로 아주 짧은 stagger */
+.is-menu .drawer__nav a{opacity:1;transform:none;transition:opacity var(--t-normal) var(--ease),transform var(--t-normal) var(--ease)}
+.is-menu .drawer__nav a:nth-child(1){transition-delay:.10s}
+.is-menu .drawer__nav a:nth-child(2){transition-delay:.15s}
+.is-menu .drawer__nav a:nth-child(3){transition-delay:.20s}
+.is-menu .drawer__nav a:nth-child(4){transition-delay:.25s}
+.drawer__foot{margin-top:auto;padding-top:32px;border-top:1px solid var(--line)}
+.js .drawer__foot{opacity:0;transform:translateY(16px)}
+.js .is-menu .drawer__foot{
+  opacity:1;transform:none;
+  transition:opacity var(--t-normal) var(--ease) .30s, transform var(--t-normal) var(--ease) .30s;
+}
+.drawer__login{display:block;min-height:44px;line-height:44px;font-size:var(--font-nav-2);font-weight:500;color:var(--ink)}
+.drawer__cta{
+  display:flex;align-items:center;justify-content:center;
+  height:54px;margin-top:12px;border-radius:999px;
+  background:var(--ink);color:#fff;font-size:var(--font-btn);font-weight:600;
+  transition:transform var(--t-micro) var(--ease),background-color var(--t-ui) var(--ease);
+}
+.drawer__cta:active{transform:scale(.98)}
+
+@media (max-width:991px){
+  /* 좁아지면 메뉴를 억지로 줄이지 않고 햄버거로 전환합니다.
+     ⚠️ 프로필은 남깁니다 — 우측은 「프로필 + 햄버거」 두 개.
+        테마 · 언어 선택은 메뉴 안 「화면 설정」(.drawer__prefs)에서 제공합니다.
+        → assets/sp-nav.css */
+  .header__nav,.header__actions .header__lang,.header__actions .btn-download{display:none}
+  .header__burger{display:flex}
+  .header__actions{gap:2px}
+  /* 프로필 · 햄버거 두 개만 남는 구간 — 히트 영역을 44px 로 맞춰 둡니다 */
+  .header__icon{width:44px;height:44px}
+}
+
+/* ── 02b Mobile header refine ──────────────────────────────────────
+   구조(로고 좌 / 햄버거 우 / Hero 위 transparent → 스크롤 후 white glass)는
+   시안 그대로 두고 비율·정렬·전환만 다듬습니다.                        */
+@media (max-width:767px){
+  :root{--header-h:66px}
+  /* 노치·다이내믹 아일랜드 — 헤더 높이에 safe area 를 더합니다 */
+  .header{padding-top:env(safe-area-inset-top, 0px)}
+  .header__inner{
+    width:100%;
+    padding-inline:var(--gutter);   /* 375~500 구간에서 20px — 본문 좌우 여백과 정확히 동일 */
+    grid-template-columns:auto minmax(0,1fr);   /* 로고 좌 / 유틸리티 우 (메뉴는 드로어) */
+    column-gap:12px;
+  }
+  .header__actions{grid-column:2}
+  .header__logo{min-height:44px}
+  .header__logo img{
+    width:clamp(98px, 27vw, 108px);    /* 375 → 101px (보이는 폭 94px) · 430 → 108px (100px) */
+    height:auto;
+  }
+  .header__icon{width:44px;height:44px}
+  .header__icon svg{width:22px;height:22px}
+  .header__icon .ic--globe{width:20px;height:20px}
+  .header__icon .ic--person{width:26.5px;height:26.5px}
+  /* Hero 위에서는 divider 없음 — 스크롤 후에만 아주 얇게 */
+  .header.is-scrolled{
+    background:rgba(255,255,255,.88);
+    -webkit-backdrop-filter:saturate(180%) blur(16px);
+    backdrop-filter:saturate(180%) blur(16px);
+    box-shadow:0 1px 0 rgba(0,0,0,.06);
+  }
+  .header__burger{margin-right:-10px}
+  .drawer{padding-top:calc(env(safe-area-inset-top, 0px) + var(--header-h) + 20px)}
+  .drawer__nav{gap:8px}
+  .drawer__nav a{font-size:clamp(26px, 7.2vw, 30px);font-weight:700;line-height:1.3;padding:9px 0}
+  .drawer__cta{height:56px}
+}
+@media (max-width:359px){
+  :root{--header-h:62px}
+  .header__inner{padding-inline:18px}
+  .header__logo img{width:94px}
+  .drawer__nav a{font-size:23px}
+}
+
+@media (min-width:992px){
+  .drawer{display:none}
+}
+
+
+/* ══ WORLD & IP — page ═════════════════════════════════════════════
+   ⚠️ 새 디자인 시스템을 만들지 않습니다. 위의 토큰(:root)·헤더·CTA·푸터·
+      reveal 시스템을 메인페이지와 그대로 공유하고, 이 블록은 시안의
+      배치만 담당합니다.
+   1920 시안 실측: 컨테이너 1400 / 카드 335×(232+텍스트) / gap 20 / 4열
+   ═════════════════════════════════════════════════════════════════ */
+
+/* ── W1 Page hero ──────────────────────────────────────────────── */
+.phero{
+  position:relative;
+  /* 시안 1920:450 → 23.4vw. 모바일 시안 375:220 → 58.7vw */
+  height:clamp(200px, 23.4vw, 480px);
+  overflow:hidden;
+  background:#897C73;               /* 이미지 로드 전 바탕 — 새 배너의 좌우 가장자리 색과 동일 (플래시 방지) */
+  isolation:isolate;
+}
+@media (max-width:767px){ .phero{height:clamp(180px, 58.7vw, 260px)} }
+.phero__img{
+  position:absolute;inset:0;
+  width:100%;height:100%;
+  object-fit:cover;
+  object-position:50% 50%;          /* Desktop — 컨테이너 비율이 원본과 같아 crop 이 없습니다 */
+  transform:scale(1.015);
+  will-change:transform,opacity;
+}
+/* ⚠️ 배너 컨테이너(높이 clamp · 비율 · padding · overflow)는 한 줄도 바뀌지 않았습니다.
+   컨테이너 높이 clamp(200px, 23.4vw, 480px) 의 23.4vw 가 원본 비율 1/4.267 과 같아서
+   854~2051px 구간에서는 crop 이 아예 없습니다.
+   그보다 좁아지면 가로만 잘리므로, 캐릭터(가로 23~40%, 얼굴 33%)가 남도록
+   crop 창을 왼쪽으로 옮깁니다. 세로는 항상 100% 라 얼굴이 잘리지 않습니다. */
+@media (max-width:1023px){ .phero__img{object-position:38% 50%} }
+@media (max-width:767px){  .phero__img{object-position:28% 50%} }
+@media (max-width:400px){  .phero__img{object-position:26% 50%} }
+/* 좌측 스크림 — 원본에 이미 좌우 그라데이션이 구워져 있으므로
+   기존(52%) 보다 훨씬 옅게 겹칩니다. 타이틀 대비만 확보하고
+   사진을 어둡게 만들지 않습니다. (이미지 자체에는 filter 를 쓰지 않습니다) */
+.phero__scrim{
+  position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(90deg,
+    rgba(20,26,38,.30) 0%,
+    rgba(20,26,38,.18) 20%,
+    rgba(20,26,38,.06) 38%,
+    rgba(20,26,38,0)   54%);
+}
+@media (max-width:767px){
+  .phero__scrim{background:linear-gradient(180deg, rgba(20,26,38,.30) 0%, rgba(20,26,38,.10) 46%, rgba(20,26,38,.46) 100%)}
+}
+.phero__inner{
+  position:relative;z-index:2;
+  height:100%;
+  display:flex;flex-direction:column;justify-content:center;
+}
+@media (max-width:767px){ .phero__inner{justify-content:flex-end;padding-bottom:22px} }
+.phero__title{
+  font-size:var(--font-heading-2);
+  font-weight:700;
+  line-height:1.2;
+  letter-spacing:-.01em;
+  color:#fff;
+  text-shadow:0 1px 3px rgba(0,0,0,.34), 0 2px 18px rgba(0,0,0,.24);
+}
+@media (max-width:767px){ .phero__title{font-size:clamp(20px, 5.6vw, 24px)} }
+
+/* 진입 — 메인페이지와 같은 언어: 이미지는 cinematic, 타이틀은 line reveal */
+.js .phero__img{opacity:0;transform:scale(1.03)}
+.is-ready .phero__img{
+  opacity:1;transform:scale(1.015);
+  transition:opacity var(--t-cine) var(--ease), transform 1400ms var(--ease);
+}
+.js .phero__title{overflow:hidden}
+.js .phero__title > span{display:block;transform:translateY(108%);opacity:0}
+.is-ready .phero__title > span{
+  transform:none;opacity:1;
+  transition:transform var(--t-reveal) var(--ease), opacity var(--t-reveal) var(--ease);
+  transition-delay:.22s;
+}
+@media (prefers-reduced-motion:reduce){
+  .js .phero__img{opacity:1;transform:none}
+  .js .phero__title > span{transform:none;opacity:1}
+}
+
+/* ── W2 Statement ──────────────────────────────────────────────── */
+/* 시안: hero 하단 450 → 문장 상단 621 = 171px */
+.wsec{padding-block:clamp(72px,8.6vw,165px) clamp(64px,4.6vw,88px)}   /* 시안 실측 165 / 88 */
+.wstat{
+  font-size:var(--font-heading-2);
+  font-weight:700;
+  line-height:1.4;                  /* 시안 줄 간격 61px 기준 */
+  letter-spacing:var(--ls-heading);
+  color:var(--ink);
+}
+.wstat .r-line{display:block}
+
+/* ── W3 Sub-heading + filter bar ───────────────────────────────── */
+/* 시안: 문장 하단 717 → 소제목 792 = 75px, 소제목 → 탭 = 46px, 탭 → 카드 = 21px */
+.wbar{margin-top:clamp(40px,3.5vw,66px)}      /* 시안: 문장 → 소제목 66px */
+.wbar__title{
+  font-size:var(--font-title);
+  font-weight:700;
+  letter-spacing:-.02em;
+  color:var(--ink);
+  line-height:1.3;
+}
+.wbar__row{
+  margin-top:clamp(16px,1.5vw,28px);          /* 시안: 소제목 → 탭 26px */
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+}
+.wtabs{display:flex;align-items:center;gap:clamp(14px,1.1vw,21px)}
+.wtab{
+  position:relative;
+  min-height:44px;                  /* 터치 타깃 */
+  display:inline-flex;align-items:center;
+  font-size:var(--font-body-md);
+  font-weight:500;
+  letter-spacing:-.012em;
+  color:var(--body-2nd);
+  transition:color var(--t-ui) var(--ease);
+}
+.wtab[aria-selected="true"]{color:var(--ink);font-weight:700}
+@media (hover:hover){ .wtab:hover{color:var(--ink)} }
+.wtab:focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:6px}
+.wtools{display:flex;align-items:center;gap:10px;flex:none}
+.wsearch{
+  display:inline-flex;align-items:center;
+  height:clamp(40px,2.5vw,48px);
+  padding:0 clamp(16px,1.15vw,22px);
+  border-radius:999px;
+  background:#fff;
+  border:1px solid rgba(var(--line-rgb),.09);
+  font-size:var(--font-body-sm);font-weight:500;letter-spacing:-.01em;color:var(--ink);
+  transition:background-color var(--t-ui) var(--ease), transform var(--t-fast) var(--ease), border-color var(--t-ui) var(--ease);
+}
+.wicon{
+  display:inline-grid;place-items:center;
+  width:clamp(40px,2.5vw,48px);height:clamp(40px,2.5vw,48px);
+  border-radius:999px;
+  background:#fff;border:1px solid rgba(var(--line-rgb),.09);
+  color:var(--ink);
+  transition:background-color var(--t-ui) var(--ease), transform var(--t-fast) var(--ease), border-color var(--t-ui) var(--ease);
+}
+.wicon svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round}
+@media (hover:hover){
+  .wsearch:hover,.wicon:hover{background:#FAFAFA;border-color:rgba(var(--line-rgb),.16);transform:scale(1.015)}
+}
+.wsearch:active,.wicon:active{transform:scale(.98)}
+@media (max-width:767px){
+  .wbar__row{align-items:flex-start}
+  .wtools{display:none}              /* 모바일 시안에는 검색/필터 버튼이 없습니다 */
+}
+
+/* ── W4 Card grid ──────────────────────────────────────────────── */
+/* 시안 1920: 4열 · card 335 · gap 20 (컨테이너 1400) */
+.wgrid{
+  margin-top:clamp(20px,1.1vw,21px);
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0,1fr));
+  gap:clamp(28px,2.1vw,40px) clamp(16px,1.05vw,20px);   /* 시안: 행 40 · 열 20 */
+  /* ⚠️ hover 그림자가 잘리지 않도록 overflow 를 걸지 않습니다 */
+}
+@media (max-width:1279px){ .wgrid{grid-template-columns:repeat(3, minmax(0,1fr))} }
+@media (max-width:1023px){ .wgrid{grid-template-columns:repeat(2, minmax(0,1fr));gap:clamp(24px,3vw,32px) clamp(16px,2.2vw,20px)} }
+@media (max-width:767px){ .wgrid{grid-template-columns:1fr;gap:30px;margin-top:clamp(24px,7vw,27px)} }
+@media (max-width:767px){ .wsec{padding-block:80px 72px} }
+
+/* 3단 분리 구조
+   .wcard        레이아웃 (그리드 아이템 · transform 없음)
+   .wcard__shell hover scale 담당 (그림자 없음)
+   .wcard__clip  overflow:hidden + border-radius  ← 클리핑 담당
+   img           inner zoom                                        */
+.wcard{position:relative}
+.wcard__shell{
+  /* ⚠️ 카드 라운드는 여기 한 곳에서만 정합니다 — 카드마다 값을 따로 쓰지 않습니다.
+     PC 24 / 모바일 16 은 :root 의 --radius-card 토큰이 결정합니다. */
+  --wr:var(--radius-card);
+  position:relative;
+  display:block;
+  border-radius:var(--wr);
+  background:#F3F3F3;               /* 시안 카드 바탕 */
+  /* 카드 프레임이 클리핑의 최종 기준입니다 — hover 로 확대해도 이미지가
+     둥근 모서리 밖으로 새지 않습니다. (그림자를 쓰지 않으므로 안전합니다) */
+  overflow:hidden;
+  box-shadow:none;                  /* ⚠️ hover 에서도 그림자를 쓰지 않습니다 */
+  transform:scale(1);
+  transform-origin:center center;
+  transition:transform 500ms var(--ease);
+  will-change:transform;
+}
+/* 모바일 16px 은 :root 의 --radius-card 가 이미 바꿔 줍니다 (별도 override 없음) */
+.wcard__clip{
+  position:relative;
+  /* 부모가 이미 클리핑하지만, Safari 에서 라운드 클립이 흐려지는 경우가 있어
+     상단 모서리는 여기서도 같은 값으로 한 번 더 잡아 둡니다 */
+  border-radius:var(--wr) var(--wr) 0 0;
+  overflow:hidden;
+  aspect-ratio:335 / 232;           /* 시안 실측 비율 — 전 구간 동일 */
+  background:#E9E9EB;
+  /* ⚠️ 카드가 많으므로 mask/translateZ 로 레이어를 승격하지 않습니다.
+     클립 요소 자체는 스케일되지 않고 안쪽 img 만 확대되므로
+     overflow:hidden + border-radius 만으로 모서리가 유지됩니다. */
+}
+/* ── 카드 썸네일 Fill 규칙 — 월드 · IP 캐릭터 전부 동일합니다 ───────────
+   width/height 100% + cover 로 이미지 영역을 여백 없이 채웁니다.
+   원본 비율은 그대로이고(stretch 없음), 어디를 보여줄지는
+   ITEMS 의 pos(=object-position) 로 이미지마다 따로 정합니다.
+   PC / Tablet / Mobile 이 같은 규칙을 씁니다 — 프레임 비율(335:232)이
+   전 구간 동일하므로 breakpoint 별로 crop 이 달라지지 않습니다.        */
+.wcard__clip img{
+  width:100%;height:100%;
+  object-fit:cover;object-position:center;
+  transform:scale(1);
+  transition:transform 620ms var(--ease);
+}
+/* 이미지가 로드되기 전 프레임을 원본 배경색으로 채워 깜빡임을 막습니다
+   (로드 후에는 cover 가 프레임을 꽉 채우므로 보이지 않습니다) */
+.wcard--ip .wcard__clip{background:var(--ipbg, #EEE)}
+/* 시안 실측(1920) — 위 25 / 좌우 26 / 아래 91 */
+.wcard__body{padding:clamp(18px,1.3vw,25px) clamp(18px,1.35vw,26px) clamp(28px,4.75vw,91px)}
+.wcard__badge{
+  display:inline-flex;align-items:center;
+  height:clamp(28px,1.72vw,33px);
+  padding:0 clamp(11px,.73vw,14px);
+  border-radius:999px;
+  background:#fff;
+  font-size:var(--font-caption);font-weight:600;letter-spacing:-.01em;
+  color:var(--ink);
+}
+.wcard__title{
+  margin-top:clamp(13px,1.05vw,20px);         /* 시안: 배지 → 제목 24px(ink) */
+  font-size:var(--font-title);
+  font-weight:700;line-height:1.3;letter-spacing:-.02em;
+  color:var(--ink);
+  transition:transform 560ms var(--ease);
+}
+/* 서브텍스트 — 공통 문구가 아니라 공간별 설명 문장이라 가독성을 올립니다.
+   Light 는 요청대로 #1C1C1C 고정, Dark 는 테마 토큰으로 넘깁니다.
+   opacity 를 따로 낮추지 않습니다. */
+:root{ --wcard-desc:#1C1C1C }
+.wcard__meta{
+  margin-top:clamp(10px,.9vw,17px);           /* 시안: 제목 → 메타 25px(ink) */
+  font-size:clamp(14px, .35vw + 12.9px, 16px);
+  font-weight:400;line-height:1.55;letter-spacing:-.01em;
+  color:var(--wcard-desc);
+  opacity:1;
+  /* 문장 길이가 달라도 카드 높이가 들쭉날쭉해지지 않도록 2줄 자리를 고정합니다 */
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+  /* ⚠️ min-height 로 두면 1줄 카드와 2줄 카드의 반올림이 갈려 46/47px 로
+     1px 씩 어긋납니다. height 로 고정해야 모든 카드가 같은 값으로 떨어집니다. */
+  height:calc(2 * 1.55em);
+}
+@media (max-width:767px){ .wcard__meta{font-size:15px} }
+@media (max-width:374px){ .wcard__meta{font-size:14px} }
+@media (hover:hover){
+  /* 당근 PR 스타일 — 그림자 없이 카드 자체가 조용히 확대 (체감 3~4%) */
+  .wcard__shell:hover{transform:scale(1.03)}
+  .wcard__shell:hover .wcard__clip img{transform:scale(1.015)}
+}
+.wcard__shell:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+@media (hover:none){ .wcard__shell:active{transform:scale(.99);transition-duration:180ms} }
+
+/* 진입 — 행 단위로 짧게 stagger */
+.js .wcard{opacity:0;translate:0 var(--rv-y)}
+.js .wcard.is-in{
+  opacity:1;translate:0 0;
+  transition:opacity var(--t-reveal) var(--ease), translate var(--t-reveal) var(--ease);
+  transition-delay:calc(var(--i, 0) * 60ms);
+}
+@media (max-width:767px){ .js .wcard{translate:0 18px} }   /* 모바일은 이동거리 축소 */
+
+/* ══ W4-1 Gallery Lightbox ═════════════════════════════════════════════════
+   카드를 누르면 현재 페이지 위에 어두운 갤러리가 열립니다.
+   상세 "페이지"가 아니라 감상 레이어라서, 닫으면 스크롤 · 필터 · 표시 개수가
+   전부 그대로 남습니다.
+
+   원칙
+     · 주인공은 이미지입니다. 흰 모달 박스 · 카드 컨테이너 · 두꺼운 테두리 ·
+       강한 그림자를 만들지 않고, 어두운 배경 위에 이미지만 떠 있게 둡니다.
+     · 이미지는 원본 비율 그대로(contain) — 세로 · 가로 · 정사각형이 같은
+       프레임 안에서 잘리지 않고 들어갑니다.
+     · Light / Dark 어느 테마에서도 같은 다크 갤러리를 씁니다.
+   ═════════════════════════════════════════════════════════════════════════ */
+.wlb{
+  position:fixed;inset:0;z-index:var(--z-modal, 900);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;
+  transition:opacity 380ms cubic-bezier(.22,1,.36,1);
+}
+.wlb.is-open{opacity:1}
+.wlb:focus{outline:none}
+.wlb[hidden]{display:none}
+.wlb__dim{position:absolute;inset:0;background:rgba(0,0,0,.85)}
+@supports (backdrop-filter:blur(2px)){
+  .wlb__dim{-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+}
+
+/* 무대 — 이미지 + 정보를 한 덩어리로 묶어 화면의 시각적 중앙에 둡니다.
+   (이미지만 중앙에 두면 아래 정보가 잘려 보입니다) */
+.wlb__stage{
+  position:relative;z-index:1;
+  display:flex;flex-direction:column;align-items:center;
+  gap:clamp(18px,1.7vw,28px);
+  max-width:min(72vw, 1100px);
+  padding-block:clamp(72px,6vw,96px);
+  touch-action:pan-y;                       /* 세로 스크롤과 스와이프가 싸우지 않게 */
+}
+.wlb__img{
+  display:block;
+  /* --cap 은 더 이상 쓰지 않습니다 — 실제 크기는 lbFit() 이 계산합니다.
+     원본이 작은 IP 캐릭터 PNG 를 화면 폭까지 억지로 늘려 흐려지는 것을 막습니다.
+     원본이 큰 월드 사진(1600×900)은 72vw / 1100px 상한에 먼저 걸립니다. */
+  max-width:min(72vw, 1100px, var(--cap, 1100px));
+  max-height:72vh;
+  width:auto;height:auto;
+  object-fit:contain;
+  opacity:0;transform:scale(.98);
+  transition:opacity 380ms cubic-bezier(.22,1,.36,1), transform 380ms cubic-bezier(.22,1,.36,1);
+  -webkit-user-drag:none;user-select:none;
+}
+.wlb__stage.is-ip{max-width:min(86vw, 720px)}
+.wlb__img.is-ip{
+  max-width:none;max-height:none;
+  aspect-ratio:1 / 1;
+  object-fit:contain;        /* 원본 1080×1080 전체 노출 — crop 금지 */
+  object-position:center;
+}
+@media (max-width:767px){
+  .wlb__stage.is-ip{max-width:100%}
+  .wlb__img.is-ip{max-width:100%;max-height:none}
+}
+
+/* WORLD — 16:9 고정 프레임.
+   실제 px 은 lbFit() 이 계산하므로 여기서는 상한을 풀고 비율/크롭 규칙만 둡니다.
+   원본이 1920×1080(=16:9) 이라 cover 로도 잘리는 부분이 없고, 흰 여백도 없습니다. */
+.wlb__stage.is-world{max-width:min(86vw, 1400px)}
+.wlb__img.is-world{
+  max-width:none;max-height:none;
+  aspect-ratio:16 / 9;
+  object-fit:cover;
+  object-position:center;
+}
+.wlb.is-open .wlb__img{opacity:1;transform:none}
+.wlb.is-closing .wlb__img{opacity:0;transform:scale(.98)}
+
+/* 정보 — 별도 배경 없이 텍스트만 */
+.wlb__info{
+  margin:0;text-align:center;max-width:min(72vw, 720px);
+  opacity:0;transform:translateY(8px);
+  transition:opacity 380ms cubic-bezier(.22,1,.36,1) 40ms,
+             transform 380ms cubic-bezier(.22,1,.36,1) 40ms,
+             filter 380ms cubic-bezier(.22,1,.36,1) 40ms;
+}
+.wlb.is-open .wlb__info{opacity:1;transform:none}
+.wlb__title{font-size:clamp(20px,1.35vw,22px);font-weight:700;letter-spacing:-.02em;line-height:1.35;color:#fff}
+.wlb__meta{margin-top:6px;font-size:clamp(13px,.9vw,14px);font-weight:500;color:rgba(255,255,255,.55)}
+.wlb__desc{margin-top:10px;font-size:14px;line-height:1.55;color:rgba(255,255,255,.72)}
+.wlb__idx{margin-top:12px;font-size:12px;letter-spacing:.06em;color:rgba(255,255,255,.42);font-variant-numeric:tabular-nums}
+
+/* 닫기 · 좌우 이동 — 원형 배경 · 그림자 없이 아이콘만 */
+.wlb__close,.wlb__nav{
+  position:absolute;z-index:2;
+  display:grid;place-items:center;
+  border:0;background:none;padding:0;
+  color:rgba(255,255,255,.85);
+  cursor:pointer;
+  opacity:.72;
+  transition:opacity 200ms cubic-bezier(.22,1,.36,1),
+             transform 200ms cubic-bezier(.22,1,.36,1),
+             color 200ms cubic-bezier(.22,1,.36,1);
+}
+.wlb__close{
+  top:clamp(20px,2vw,32px);right:clamp(20px,2vw,32px);
+  width:46px;height:46px;
+}
+.wlb__close svg{width:22px;height:22px}
+.wlb__nav{top:50%;margin-top:-26px;width:52px;height:52px}
+.wlb__nav--prev{left:clamp(8px,2.4vw,40px)}
+.wlb__nav--next{right:clamp(8px,2.4vw,40px)}
+.wlb__nav svg{width:26px;height:26px}
+.wlb__close svg,.wlb__nav svg{fill:currentColor;display:block}
+@media (hover:hover){
+  .wlb__close:hover{opacity:1;color:#fff}
+  .wlb__nav--prev:hover{opacity:1;color:#fff;transform:translateX(-3px)}
+  .wlb__nav--next:hover{opacity:1;color:#fff;transform:translateX(3px)}
+}
+.wlb__close:focus-visible,.wlb__nav:focus-visible{
+  opacity:1;color:#fff;outline:2px solid rgba(255,255,255,.85);outline-offset:2px;border-radius:10px;
+}
+.wlb__nav[disabled]{opacity:.22;cursor:default}
+
+/* 모바일 — PC 를 줄인 게 아니라, 이미지 + 정보 + 좌우 이동으로 다시 구성합니다 */
+@media (max-width:767px){
+  .wlb__stage{
+    max-width:100%;
+    width:100%;
+    padding:calc(env(safe-area-inset-top, 0px) + 68px) 20px calc(env(safe-area-inset-bottom, 0px) + 76px);
+    gap:18px;
+  }
+  .wlb__img{max-width:100%;max-height:60dvh}
+  /* 모바일에서도 WORLD 는 같은 16:9 — 세로로 늘리거나 잘라내지 않습니다 */
+  .wlb__stage.is-world{max-width:100%}
+  .wlb__img.is-world{max-width:100%;max-height:none}
+  .wlb__info{text-align:left;align-self:stretch;max-width:100%}
+  .wlb__title{font-size:21px}
+  .wlb__meta{font-size:13px}
+  .wlb__desc{font-size:14px;line-height:1.6}
+  .wlb__close{
+    top:calc(env(safe-area-inset-top, 0px) + 16px);right:16px;
+    width:44px;height:44px;
+  }
+  /* 이미지 좌우가 아니라 화면 아래쪽에 나란히 둡니다 (엄지로 닿는 자리) */
+  .wlb__nav{
+    top:auto;margin-top:0;
+    bottom:calc(env(safe-area-inset-bottom, 0px) + 16px);
+    width:48px;height:48px;
+  }
+  .wlb__nav--prev{left:24px}
+  .wlb__nav--next{right:24px}
+}
+@supports not (height:100dvh){
+  @media (max-width:767px){ .wlb__img{max-height:58vh} }
+}
+@media (prefers-reduced-motion:reduce){
+  .wlb,.wlb__img,.wlb__info,.wlb__close,.wlb__nav{transition-duration:1ms}
+  .wlb__img,.wlb__info{transform:none}
+}
+
+/* ── W5 더보기 ─────────────────────────────────────────────────── */
+.wmore{
+  margin-top:clamp(28px,2.1vw,40px);
+  display:flex;justify-content:center;
+}
+.wmore__btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  height:clamp(48px,3.4vw,65px);
+  padding:0 clamp(26px,2.1vw,40px);
+  border-radius:999px;
+  background:var(--ink);color:#fff;
+  font-size:var(--font-btn);font-weight:600;letter-spacing:-.01em;
+  transition:background-color var(--t-ui) var(--ease), transform var(--t-fast) var(--ease), opacity var(--t-ui) var(--ease);
+}
+@media (hover:hover){ .wmore__btn:hover{background:#333B45;transform:scale(1.015)} }
+.wmore__btn:active{transform:scale(.98)}
+.wmore[hidden]{display:none}
+.wempty{
+  margin-top:48px;text-align:center;
+  font-size:var(--font-body-md);color:var(--body-2nd);
+}
+
+/* ── 08 Final CTA + Footer ─────────────────────────────────────── */
+.cta{background:var(--band);padding-block:var(--space-section-md) var(--space-section-sm)}
+.cta__inner{display:flex;align-items:center;justify-content:space-between;gap:32px}
+.cta__title{
+  font-size:var(--font-heading-2);
+  line-height:1.25;
+  letter-spacing:-.025em;
+  font-weight:700;
+  color:var(--ink);
+}
+.cta__btn{
+  display:inline-flex;align-items:center;gap:8px;
+  margin-top:var(--space-content-md);   /* 제목 → 버튼 20 → 36px */
+  height:clamp(48px,3.3vw,63px);
+  padding:0 clamp(20px,1.5vw,28px);
+  border-radius:999px;
+  background:var(--ink);color:#fff;
+  font-size:var(--font-btn);font-weight:600;letter-spacing:-.01em;
+  transition:background-color var(--t-ui) var(--ease), transform var(--t-micro) var(--ease);
+}
+.cta__btn:hover{background:#333B45;transform:scale(1.015)}
+.cta__btn:active{transform:scale(.98)}
+.cta__btn svg{
+  width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;
+  transition:transform var(--t-fast) var(--ease);
+}
+.cta__btn:hover svg{transform:translate(3px,-3px)}
+/* ⚠️ 캐릭터 그룹은 절대 늘어나면 안 됩니다.
+   width 만 반응형으로 주고 height:auto + aspect-ratio + object-fit:contain 으로 고정.
+   화면이 좁아지면 이미지가 눌리는 게 아니라 구성 전체가 비례로 작아집니다. */
+.cta__art{
+  flex:none;
+  width:clamp(200px, 19.5vw, 375px);
+  max-width:100%;
+  height:auto;
+  aspect-ratio:375 / 269;
+  object-fit:contain;
+  /* ⚠️ 컨테이너(width · height · aspect-ratio · margin)는 그대로입니다.
+     교체된 PNG 는 캔버스(819×556) 안쪽에 좌우 약 10.6% 의 투명 여백을 갖고 있어,
+     같은 슬롯에 contain 으로 넣으면 캐릭터가 이전 리소스보다 약 8% 작게 보입니다.
+     레이아웃을 건드리지 않고 그리기 단계에서만 8% 를 되돌립니다
+     (transform 은 layout box 에 영향을 주지 않습니다).
+     확대분(각 변 4.5%)은 투명 여백(10.6%) 안에서 흡수되므로
+     캐릭터가 컨테이너 밖으로 나가거나 잘리지 않습니다. */
+  transform:scale(1.09);
+  transform-origin:center center;
+}
+/* ── Final CTA · 모바일 ──────────────────────────────────────────
+   시안 composition 그대로: 텍스트·버튼은 왼쪽 정렬, 캐릭터는 그 아래 오른쪽.
+   [이전 섹션] → 104 → 제목 → 28 → 버튼 → 48 → 캐릭터 → 80 → Footer      */
+@media (max-width:767px){
+  .cta{padding-block:104px 80px}
+  .cta__inner{display:block}
+  .cta__title{
+    /* 두 구절이 각각 한 줄로 떨어지도록 폭에 맞춰 유동 (@375 31px) */
+    font-size:clamp(26px, 8.3vw, 34px);
+    line-height:1.22;
+    letter-spacing:-.03em;
+  }
+  .cta__btn{margin-top:28px;height:50px;padding:0 22px;font-size:16px}
+  /* ⚠️ 캐릭터 3개는 하나의 PNG composition 입니다.
+     width 만 주고 height:auto + aspect-ratio + object-fit:contain 이므로
+     화면이 좁아져도 개별 캐릭터가 눌리거나 잘리지 않고 비례로만 작아집니다. */
+  .cta__art{width:min(88vw, 100%);margin-left:auto;margin-top:48px}
+}
+@media (max-width:359px){
+  .cta__art{width:min(92vw, 100%)}
+}
+
+.footer{background:var(--band);padding-block:clamp(32px,2.6vw,50px) clamp(36px,3vw,58px);border-top:1px solid rgba(var(--line-rgb),.06)}
+.footer__inner{display:flex;flex-wrap:wrap;gap:24px 48px;align-items:flex-start;justify-content:space-between}
+.footer__logo{display:flex;align-items:center;min-height:44px}
+.footer__logo img{height:22px;width:auto;filter:invert(1) brightness(.16)}
+.footer__links{display:flex;flex-wrap:wrap;gap:10px 28px}
+.footer__links a{font-size:var(--font-nav-2);font-weight:500;color:var(--ink-soft);min-height:44px;display:inline-flex;align-items:center;transition:opacity var(--t-micro) var(--ease)}
+.footer__links a:hover{opacity:.6}
+.footer__bottom{
+  width:100%;margin-top:8px;
+  display:flex;align-items:center;justify-content:space-between;gap:16px 24px;
+}
+.footer__meta{font-size:var(--font-caption);font-weight:400;line-height:1.8;color:var(--body-2nd)}
+/* ── Footer SNS ────────────────────────────────────────────────────
+   아이콘만(텍스트 없음) · 브랜드 컬러 없음 · 원형 배경/그림자 없음.
+   히트 영역(44px)과 보이는 아이콘 크기(20~21px)를 분리합니다.
+   Bootstrap Icons 는 fill 기반이라 각 로고의 "먹는 면적"이 달라서,
+   박스 크기를 기계적으로 같게 두지 않고 optical 로 맞췄습니다.
+     discord   가로로 넓은 실루엣  → 21px
+     youtube   가로로 가장 넓음    → 20px
+     instagram 정사각 외곽선       → 20px                              */
+/* 히트 영역 40×44 · 아이콘 20~21px → 아이콘 사이의 "보이는" 간격이 정확히 20px.
+   (44×44 로 두면 보이는 간격이 24px 이 되어 요청하신 16~20px 범위를 벗어납니다) */
+.footer__sns{display:flex;align-items:center;justify-content:flex-end;flex:none;margin-right:-10px}
+.footer__sns-a{
+  width:40px;height:44px;
+  display:inline-flex;align-items:center;justify-content:center;
+  color:var(--ink-soft);opacity:.65;
+  transition:opacity 200ms cubic-bezier(.22,1,.36,1),
+             transform 200ms cubic-bezier(.22,1,.36,1),
+             color 200ms cubic-bezier(.22,1,.36,1);
+}
+.footer__sns-a .ic{fill:currentColor;stroke:none;display:block}
+.footer__sns-a .ic--discord{width:21px;height:21px}
+.footer__sns-a .ic--youtube{width:20px;height:20px}
+.footer__sns-a .ic--instagram{width:20px;height:20px}
+@media (hover:hover){
+  .footer__sns-a:hover{opacity:1;color:var(--ink);transform:translateY(-2px)}
+}
+.footer__sns-a:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:10px}
+@media (prefers-reduced-motion:reduce){ .footer__sns-a{transition-duration:1ms} }
+/* 모바일 — 억지로 오른쪽에 붙이지 않고 Copyright 아래로 자연스럽게 내려옵니다.
+   좌우 여백 기준선을 맞추기 위해 44px 히트 영역만큼 바깥으로 상쇄합니다. */
+@media (max-width:767px){
+  .footer__bottom{flex-direction:column;align-items:flex-start;gap:10px}
+  .footer__sns{justify-content:flex-start;margin-left:-10px;margin-right:0}
+}
+
+/* ══ 09 Reveal system ═══════════════════════════════════════════════
+   딱 세 가지만 씁니다. 그 외 요소는 정지 상태를 유지합니다(§scroll rhythm).
+     .r-line  헤드라인 — mask line reveal (가장 강한 연출)
+     .reveal  본문·카드 — fade-up (절제)
+     .rv-img  큰 비주얼 — 컨테이너 고정 + 내부만 scale (radius 유지)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* 09-1. 헤드라인 line reveal — 아래에서 마스크가 걷히듯.
+   구조(줄바꿈)는 JS 없이도 유지되고, 움직임만 .js 로 게이트합니다. */
+.r-line{display:block}
+.r-line--inline{display:inline-block;vertical-align:top}
+.r-line--inline + .r-line--inline{margin-left:.28em}
+/* 모바일 시안은 두 구절이 각각 한 줄 — 줄바꿈 위치를 고정합니다 */
+@media (max-width:767px){
+  .r-line--inline{display:block}
+  .r-line--inline + .r-line--inline{margin-left:0}
+}
+.js .r-line{
+  overflow:hidden;
+  padding-bottom:.12em;   /* 디센더가 잘리지 않게 자리를 벌리고 */
+  margin-bottom:-.12em;   /* 같은 값의 음수 마진으로 레이아웃은 되돌립니다 */
+}
+.js .r-line > span{
+  display:block;
+  transform:translateY(110%);
+  opacity:0;
+  transition:transform var(--t-reveal) var(--ease), opacity var(--t-reveal) var(--ease);
+}
+.js .is-in .r-line > span{transform:none;opacity:1}
+.js .is-in .r-line:nth-child(2) > span{transition-delay:calc(var(--stagger))}
+.js .is-in .r-line:nth-child(3) > span{transition-delay:calc(var(--stagger) * 2)}
+
+/* 09-2. 본문·카드 fade-up — 헤드라인보다 늦게, 더 얕게 */
+.js .reveal{opacity:0;transform:translateY(var(--rv-y))}
+.js .reveal.is-in{
+  opacity:1;transform:none;
+  transition:opacity var(--t-reveal) var(--ease), transform var(--t-reveal) var(--ease);
+}
+.js .reveal--2.is-in{transition-delay:calc(var(--stagger) * 1.2)}
+.js .reveal--3.is-in{transition-delay:calc(var(--stagger) * 2.2)}
+
+/* 헤드라인 두 줄이 다 올라온 뒤 본문 (약 200ms 시차) */
+.js .section-head .section-desc{opacity:0;transform:translateY(16px)}
+.js .section-head.is-in .section-desc{
+  opacity:1;transform:none;
+  transition:opacity var(--t-normal) var(--ease) calc(var(--stagger) * 2.6),
+             transform var(--t-normal) var(--ease) calc(var(--stagger) * 2.6);
+}
+
+/* 09-3. 큰 비주얼 — 공간이 열리며 드러나는 느낌.
+   ⚠️ radius 를 가진 래퍼는 고정하고 내부 이미지만 transform 합니다.
+   ⚠️ transform 이 아니라 translate/scale 개별 속성을 씁니다 —
+      hover 의 transform 과 겹쳐도 서로 지워지지 않습니다. */
+.js .rv-img{opacity:0;translate:0 calc(var(--rv-y) * .6)}
+.js .rv-img.is-in{
+  opacity:1;translate:0 0;
+  transition:opacity var(--t-cine) var(--ease-soft), translate var(--t-cine) var(--ease-soft);
+}
+/* CTA 캐릭터 그룹 — 하나의 구성이 조용히 등장 (bounce·개별 비행 금지) */
+.js .cta__art{opacity:0;scale:.96;translate:0 12px}
+.js .cta__art.is-in{
+  opacity:1;scale:1;translate:0 0;
+  transition:opacity 900ms var(--ease-soft) calc(var(--stagger) * 3.4),
+             scale     900ms var(--ease-soft) calc(var(--stagger) * 3.4),
+             translate 900ms var(--ease-soft) calc(var(--stagger) * 3.4);
+}
+/* CTA 버튼 — 헤드라인 다음에 fade-up */
+.js .cta__text .cta__btn{opacity:0;translate:0 16px}
+.js .cta__text.is-in .cta__btn{
+  opacity:1;translate:0 0;
+  transition:opacity var(--t-normal) var(--ease) calc(var(--stagger) * 2.4),
+             translate var(--t-normal) var(--ease) calc(var(--stagger) * 2.4),
+             background-color var(--t-ui) var(--ease),
+             transform var(--t-fast) var(--ease);
+}
+
+/* 09-4. 캐릭터 rail — rail 전체가 먼저 들어오고, 앞쪽 카드만 아주 짧게 stagger.
+   (entrance 는 translate, hover 는 transform 이라 서로 간섭하지 않습니다) */
+.js .marquee__card{opacity:0;translate:0 32px}
+.js .marquee.is-in .marquee__card{
+  opacity:1;translate:0 0;
+  transition:opacity var(--t-reveal) var(--ease), translate var(--t-reveal) var(--ease),
+             transform 680ms var(--ease-soft);
+  transition-delay:calc(var(--stagger) * 2.6 + var(--i, 0) * 60ms),
+                   calc(var(--stagger) * 2.6 + var(--i, 0) * 60ms), 0s;
+}
+
+/* 히어로 인트로 */
+.js .hero__title .line > span,
+.js .hero__sub .line > span{transform:translateY(112%)}
+.js .hero__cta{opacity:0;transform:translateY(22px)}
+.js .hero__scrollcue{opacity:0;transform:translateX(-50%) translateY(22px)}
+.js .header{opacity:0}
+.is-ready .hero__title .line > span,
+.is-ready .hero__sub .line > span{transform:none;transition:transform 900ms var(--ease-soft)}
+.is-ready .hero__title .line:nth-child(1) > span{transition-delay:.26s}
+.is-ready .hero__title .line:nth-child(2) > span{transition-delay:.34s}
+.is-ready .hero__sub .line:nth-child(1) > span{transition-delay:.44s}
+.is-ready .hero__sub .line:nth-child(2) > span{transition-delay:.50s}
+.is-ready .hero__cta{opacity:1;transform:none;transition:opacity 820ms var(--ease),transform 820ms var(--ease);transition-delay:.60s}
+.is-ready .hero__scrollcue{opacity:1;transform:translateX(-50%);transition:opacity 820ms var(--ease),transform 820ms var(--ease);transition-delay:.80s}
+.is-ready .header{opacity:1;
+  /* ⚠️ transform 을 함께 적어 두지 않으면 인트로 전환이 Smart Header 전환을 덮어씁니다 */
+  transition:opacity 900ms var(--ease) .1s, transform 320ms var(--ease)}
+.js .hero__media{transform:scale(1.035);filter:brightness(.72)}
+.is-ready .hero__media{
+  transform:translate3d(var(--px,0px),var(--py,0px),0) scale(1);
+  filter:none;
+  transition:transform 1400ms var(--ease-soft), filter 1100ms var(--ease-soft);
+}
+/* 인트로가 끝나면 parallax 가 즉각 반응하도록 transition 을 짧게 */
+.hero__media.is-live{transition:transform 480ms var(--ease)}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important;scroll-behavior:auto !important}
+  .js .reveal,.js .rv-img,.js .cta__art,
+  .js .section-head .section-desc,.js .cta__text .cta__btn,.js .drawer__foot{
+    opacity:1;transform:none;translate:none;scale:none;
+  }
+  .js .r-line > span,.js .cine__copy .line > span{transform:none;opacity:1}
+  .js .r-line,.js .cine__copy .line{overflow:visible}
+  .cine__clip video,.cine__clip img{transform:none}
+  .js .marquee__card{opacity:1;translate:none;transform:none}
+  .marquee__card:hover,.marquee__card:hover img{transform:none}
+  .js .hero__title .line > span,.js .hero__sub .line > span{transform:none}
+  .js .hero__cta,.js .hero__scrollcue,.js .header{opacity:1;transform:none}
+  .js .hero__scrollcue{transform:translateX(-50%)}
+  .js .hero__media{transform:none;filter:none}
+  .hero__scrollcue svg{animation:none}
+  .cine__copy .line{opacity:1;transform:none;filter:none}
+  .slide.is-active .slide__inner img{animation:none}
+}
+
+/* ══ MOBILE — Touch feedback ═══════════════════════════════════════
+   Hover 가 없는 환경에서 hover 효과를 억지로 흉내 내지 않고,
+   눌렀을 때만 아주 짧게 가라앉습니다 (§13: scale .985~.99 · 150~220ms).
+   기존에 .97 / .98 로 세게 눌리던 요소도 여기서 한 단계 부드럽게 맞춥니다. */
+@media (hover:none){
+  .btn:active,.btn--light:active,.btn--ghost:active,.btn-download:active,
+  .sbtn:active,.abtn:active,.mpbtn:active,.mpbtn-s:active,.cta__btn:active,
+  .dl__btn:active,.dl__card:active,.drv__btn:active,.smore__btn:active,
+  .spsel__btn:active,.stab:active,.faq__q:active,.wtab:active,
+  .nrow__link:active,.ecard__link:active,.ntab:active,
+  .marquee__card:active,.wcard:active,.card:active,
+  .drawer__cta:active,.pwtog:active,.spsearch__clear:active{
+    transform:scale(.99);
+    transition:transform 180ms var(--ease);
+  }
+  /* 눌림이 끝나면 원래대로 — 되돌아오는 쪽이 조금 더 길게 */
+  .btn,.sbtn,.abtn,.mpbtn,.mpbtn-s,.cta__btn,.dl__btn,.drv__btn,.smore__btn,
+  .spsel__btn,.stab,.faq__q,.nrow__link,.ecard__link,.marquee__card,.wcard{
+    transition-property:background-color,color,border-color,box-shadow,opacity,transform;
+    transition-duration:200ms;
+  }
+}
+
+/* ══ MOBILE — Form control 높이 통일 ═══════════════════════════════
+   화면마다 50 / 54 / 56 으로 제각각이던 높이를 52px 하나로 맞춥니다.
+   폭은 이미 전 페이지가 20px 그리드(320 @375)를 쓰고 있어 그대로 둡니다. */
+@media (max-width:767px){
+  :root{--sp-fld-h:52px}
+}
+
+/* ══ MOBILE — Page top breathing + Page Title scale ════════════════
+   §04 페이지 상단 여백 72~96 · §05 Page Title 30~36.
+   ⚠️ 헤더가 fixed 라 섹션 padding 만으로는 체감 여백이 생기지 않습니다.
+      헤더 높이를 더한 뒤 실제로 보이는 여백을 기준으로 잡았습니다. */
+@media (max-width:767px){
+  .mptitle,.ntitle,.stitle,.ahead__title{
+    font-size:clamp(30px, 8.4vw, 34px);
+    line-height:1.22;
+    letter-spacing:-.03em;
+  }
+  .ahead__desc,.mpsub{font-size:15px;line-height:1.65}
+}
+
+@media (max-width:767px){
+  /* 사진 히어로 아래 첫 섹션 — 제목이 히어로에 붙어 보이지 않게 */
+  .nsec,.ssec,.wsec{padding-top:80px}
+}
+</style>
+
+<!-- Dark Theme — 위 <style> 의 Light 토큰을 html[data-theme="dark"] 에서 재정의합니다 -->
+<link rel="stylesheet" href="assets/sp-theme.css">
+<link rel="stylesheet" href="assets/sp-nav.css">
+
+<!-- 공통 Account / Session 모듈 (PROTOTYPE ONLY) -->
+<script src="assets/sp-auth.js"></script>
+<!-- 공통 Dropdown / Select / Search 시스템 -->
+<script src="assets/sp-ui.js"></script>
+<script src="assets/sp-nav.js"></script>
+</head>
+<body>
+<!-- ═══════════════ HEADER ═══════════════ -->
+<header class="header" id="header">
+  <div class="header__inner">
+    <a class="header__logo" href="index.html" aria-label="SuperPlat 홈" data-i18n-aria>
+      <img src="assets/logo-superplat.png" alt="SuperPlat" width="366" height="132">
+    </a>
+
+    <nav class="header__nav" aria-label="주요 메뉴" data-i18n-aria>
+      <a class="header__link" href="index.html#about" data-i18n="nav1">소개</a>
+      <a class="header__link" href="world.html" data-i18n="nav2" aria-current="page">월드 &amp; IP</a>
+      <a class="header__link" href="news.html" data-i18n="nav3">뉴스</a>
+      <a class="header__link" href="support.html" data-i18n="nav4">고객지원</a>
+    </nav>
+
+    <div class="header__actions">
+      <div class="header__lang" id="lang">
+        <button class="header__icon" type="button" id="langBtn" aria-haspopup="true" aria-expanded="false" aria-label="언어 선택" data-i18n-aria>
+          <svg class="ic ic--globe" viewBox="0 0 16 16" aria-hidden="true"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm7.5-6.923c-.67.204-1.335.82-1.887 1.855A7.97 7.97 0 0 0 5.145 4H7.5V1.077zM4.09 4a9.267 9.267 0 0 1 .64-1.539 6.7 6.7 0 0 1 .597-.933A7.025 7.025 0 0 0 2.255 4H4.09zm-.582 3.5c.03-.877.138-1.718.312-2.5H1.674a6.958 6.958 0 0 0-.656 2.5h2.49zM4.847 5a12.5 12.5 0 0 0-.338 2.5H7.5V5H4.847zM8.5 5v2.5h2.99a12.495 12.495 0 0 0-.337-2.5H8.5zM4.51 8.5a12.5 12.5 0 0 0 .337 2.5H7.5V8.5H4.51zm3.99 0V11h2.653c.187-.765.306-1.608.338-2.5H8.5zM5.145 12c.138.386.295.744.468 1.068.552 1.035 1.218 1.65 1.887 1.855V12H5.145zm.182 2.472a6.696 6.696 0 0 1-.597-.933A9.268 9.268 0 0 1 4.09 12H2.255a7.024 7.024 0 0 0 3.072 2.472zM3.82 11a13.652 13.652 0 0 1-.312-2.5h-2.49c.062.89.291 1.733.656 2.5H3.82zm6.853 3.472A7.024 7.024 0 0 0 13.745 12H11.91a9.27 9.27 0 0 1-.64 1.539 6.688 6.688 0 0 1-.597.933zM8.5 12v2.923c.67-.204 1.335-.82 1.887-1.855.173-.324.33-.682.468-1.068H8.5zm3.68-1h2.146c.365-.767.594-1.61.656-2.5h-2.49a13.65 13.65 0 0 1-.312 2.5zm2.802-3.5a6.959 6.959 0 0 0-.656-2.5H12.18c.174.782.282 1.623.312 2.5h2.49zM11.27 2.461c.247.464.462.98.64 1.539h1.835a7.024 7.024 0 0 0-3.072-2.472c.218.284.418.598.597.933zM10.855 4a7.966 7.966 0 0 0-.468-1.068C9.835 1.897 9.17 1.282 8.5 1.077V4h2.355z"/></svg>
+        </button>
+        <div class="header__langmenu" role="menu" aria-labelledby="langBtn">
+          <button type="button" role="menuitem" data-lang="ko" aria-current="true">한국어</button>
+          <button type="button" role="menuitem" data-lang="en" aria-current="false">English</button>
+        </div>
+      </div>
+
+      <button class="header__icon header__theme" type="button" id="themeBtn"
+              aria-label="다크 모드로 전환" title="다크 모드로 전환">
+        <svg class="ic ic--moon" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 .278a.77.77 0 0 1 .08.858 7.2 7.2 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277q.792-.001 1.533-.16a.79.79 0 0 1 .81.316.73.73 0 0 1-.031.893A8.35 8.35 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.75.75 0 0 1 6 .278M4.858 1.311A7.27 7.27 0 0 0 1.025 7.71c0 4.02 3.279 7.276 7.319 7.276a7.32 7.32 0 0 0 5.205-2.162q-.506.063-1.029.063c-4.61 0-8.343-3.714-8.343-8.29 0-1.167.242-2.278.681-3.286"/></svg>
+        <svg class="ic ic--sun" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6m0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5M3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8m10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0m-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0m9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707M4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707"/></svg>
+      </button>
+
+      <a class="header__icon header__login" href="auth.html" aria-label="로그인" data-i18n-aria>
+        <svg class="ic ic--person" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3Zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/></svg>
+      </a>
+
+      <a class="btn-download" href="index.html#download" data-i18n="download">다운로드</a>
+
+      <button class="header__burger" type="button" id="burger" aria-label="메뉴 열기" data-i18n-aria aria-expanded="false" aria-controls="drawer">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- 모바일 드로어 -->
+<div class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="전체 메뉴" data-i18n-aria inert>
+  <nav class="drawer__nav" aria-label="모바일 메뉴" data-i18n-aria>
+    <a href="index.html#about" data-i18n="nav1">소개</a>
+    <a href="world.html" data-i18n="nav2" aria-current="page">월드 &amp; IP</a>
+    <a href="news.html" data-i18n="nav3">뉴스</a>
+    <a href="support.html" data-i18n="nav4">고객지원</a>
+  </nav>
+  <div class="drawer__foot">
+    <section class="drawer__prefs" aria-labelledby="prefsTitle">
+      <h2 class="drawer__prefs-t" id="prefsTitle" data-i18n-ko>화면 설정</h2>
+
+      <div class="drawer__prow">
+        <span class="drawer__plabel" data-i18n-ko>테마</span>
+        <div class="drawer__seg" role="radiogroup" aria-label="테마 선택" data-i18n-aria>
+          <button type="button" role="radio" data-theme-set="light" aria-checked="false" aria-label="라이트 모드" data-i18n-aria>
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6m0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5M3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8m10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0m-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0m9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707M4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707"/></svg><span data-i18n-ko>라이트</span>
+          </button>
+          <button type="button" role="radio" data-theme-set="dark" aria-checked="false" aria-label="다크 모드" data-i18n-aria>
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 .278a.77.77 0 0 1 .08.858 7.2 7.2 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277q.792-.001 1.533-.16a.79.79 0 0 1 .81.316.73.73 0 0 1-.031.893A8.35 8.35 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.75.75 0 0 1 6 .278M4.858 1.311A7.27 7.27 0 0 0 1.025 7.71c0 4.02 3.279 7.276 7.319 7.276a7.32 7.32 0 0 0 5.205-2.162q-.506.063-1.029.063c-4.61 0-8.343-3.714-8.343-8.29 0-1.167.242-2.278.681-3.286"/></svg><span data-i18n-ko>다크</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="drawer__prow">
+        <span class="drawer__plabel" data-i18n-ko>언어</span>
+        <div class="drawer__seg" role="group" aria-label="언어 선택" data-i18n-aria>
+          <button type="button" data-lang="ko" aria-current="true" aria-label="한국어" lang="ko">한국어</button>
+          <button type="button" data-lang="en" aria-current="false" aria-label="English" lang="en">English</button>
+        </div>
+      </div>
+    </section>
+    <a class="drawer__login" href="auth.html" data-i18n="login">로그인</a>
+    <a class="drawer__cta" href="index.html#download" data-i18n="download">다운로드</a>
+  </div>
+</div>
+
+<main>
+<!-- ═══════════════ PAGE HERO ═══════════════ -->
+<section class="phero" aria-labelledby="wht">
+  <img class="phero__img rv-img" src="assets/world-hero.png"
+       alt="해변 선베드에 앉아 휴대폰을 보는 슈퍼플랫 캐릭터" width="1920" height="450"
+       fetchpriority="high" decoding="async">
+  <div class="phero__scrim" aria-hidden="true"></div>
+  <div class="wrap phero__inner">
+    <h1 class="phero__title" id="wht"><span>WORLD &amp; IP</span></h1>
+  </div>
+</section>
+
+<!-- ═══════════════ WORLD & IP LIST ═══════════════ -->
+<section class="wsec" aria-labelledby="wstat">
+  <div class="wrap">
+    <h2 class="wstat section-head" id="wstat" lang="ko">
+      <span class="r-line"><span data-i18n="wa">새로 열린 공간과 새로 합류한</span></span>
+      <span class="r-line"><span data-i18n="wb">캐릭터를 만나보세요.</span></span>
+    </h2>
+
+    <div class="wbar">
+      <h3 class="wbar__title reveal" data-i18n="wc">월드 &amp; IP</h3>
+      <div class="wbar__row reveal">
+        <div class="wtabs" role="tablist" aria-label="월드 & IP 분류">
+          <button class="wtab" type="button" role="tab" data-filter="all"  aria-selected="true"  data-i18n="wt1">전체</button>
+          <button class="wtab" type="button" role="tab" data-filter="world" aria-selected="false" data-i18n="wt2">월드</button>
+          <button class="wtab" type="button" role="tab" data-filter="ip"    aria-selected="false" data-i18n="wt3">IP캐릭터</button>
+        </div>
+        <div class="wtools">
+          <button class="wsearch" type="button" data-i18n="wt4">검색하기</button>
+          <button class="wicon" type="button" aria-label="필터">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 7h10M18 7h2M4 12h3M11 12h9M4 17h9M17 17h3"/>
+              <circle cx="16" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="15" cy="17" r="2"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="wgrid" id="wGrid" role="list"></div>
+    <p class="wempty" id="wEmpty" hidden data-i18n="wempty">해당 분류의 콘텐츠가 아직 없습니다.</p>
+    <div class="wmore" id="wMoreWrap">
+      <button class="wmore__btn" id="wMore" type="button" data-i18n="wmore">더보기</button>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ FINAL CTA ═══════════════ -->
+<section class="cta" id="download" aria-labelledby="ctat">
+  <div class="wrap cta__inner">
+    <div class="cta__text section-head">
+      <h2 class="cta__title" id="ctat" lang="ko">
+        <span class="r-line r-line--inline"><span data-i18n="ctaa">문은 열려있습니다.</span></span><span class="r-line r-line--inline"><span data-i18n="ctab">지금 바로 들어와 보세요!</span></span>
+      </h2>
+      <a class="cta__btn" href="index.html#download">
+        <span data-i18n="ctac">다운로드 바로가기</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg>
+      </a>
+    </div>
+    <img class="cta__art rv-img" src="assets/cta-characters.png" alt="" aria-hidden="true" width="375" height="269" loading="lazy" decoding="async">
+  </div>
+</section>
+</main>
+
+<footer class="footer" id="support">
+  <div class="wrap footer__inner">
+    <a class="footer__logo" href="index.html" aria-label="SuperPlat 홈" data-i18n-aria>
+      <img src="assets/logo-superplat.png" alt="SuperPlat" width="366" height="132">
+    </a>
+    <nav class="footer__links" aria-label="푸터 메뉴" data-i18n-aria>
+      <a href="index.html#about" data-i18n="nav1">소개</a>
+      <a href="world.html" data-i18n="nav2">월드 &amp; IP</a>
+      <a href="news.html" data-i18n="nav3">뉴스</a>
+      <a href="support.html" data-i18n="nav4">고객지원</a>
+      <a href="terms.html" data-i18n="terms">이용약관</a>
+      <a href="privacy.html" data-i18n="privacy">개인정보처리방침</a>
+    </nav>
+    <div class="footer__bottom">
+      <p class="footer__meta">© 2026 SuperPlat. All rights reserved.</p>
+      <div class="footer__sns">
+        <a class="footer__sns-a" href="https://discord.com/invite/BNRVBgJd" target="_blank" rel="noopener noreferrer" aria-label="SuperPlat Discord"><svg class="ic ic--discord" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.545 2.907a13.2 13.2 0 0 0-3.257-1.011.05.05 0 0 0-.052.025c-.141.25-.297.577-.406.833a12.2 12.2 0 0 0-3.658 0 8 8 0 0 0-.412-.833.05.05 0 0 0-.052-.025c-1.125.194-2.22.534-3.257 1.011a.04.04 0 0 0-.021.018C.356 6.024-.213 9.047.066 12.032q.003.022.021.037a13.3 13.3 0 0 0 3.995 2.02.05.05 0 0 0 .056-.019q.463-.63.818-1.329a.05.05 0 0 0-.01-.059l-.018-.011a9 9 0 0 1-1.248-.595.05.05 0 0 1-.02-.066l.015-.019q.127-.095.248-.195a.05.05 0 0 1 .051-.007c2.619 1.196 5.454 1.196 8.041 0a.05.05 0 0 1 .053.007q.121.1.248.195a.05.05 0 0 1-.004.085 8 8 0 0 1-1.249.594.05.05 0 0 0-.03.03.05.05 0 0 0 .003.041c.24.465.515.909.817 1.329a.05.05 0 0 0 .056.019 13.2 13.2 0 0 0 4.001-2.02.05.05 0 0 0 .021-.037c.334-3.451-.559-6.449-2.366-9.106a.03.03 0 0 0-.02-.019m-8.198 7.307c-.789 0-1.438-.724-1.438-1.612s.637-1.613 1.438-1.613c.807 0 1.45.73 1.438 1.613 0 .888-.637 1.612-1.438 1.612m5.316 0c-.788 0-1.438-.724-1.438-1.612s.637-1.613 1.438-1.613c.807 0 1.451.73 1.438 1.613 0 .888-.631 1.612-1.438 1.612"/></svg></a>
+        <a class="footer__sns-a" href="https://www.youtube.com/@SuperPlat.official" target="_blank" rel="noopener noreferrer" aria-label="SuperPlat YouTube"><svg class="ic ic--youtube" viewBox="0 0 16 16" aria-hidden="true"><path d="M8.051 1.999h.089c.822.003 4.987.033 6.11.335a2.01 2.01 0 0 1 1.415 1.42c.101.38.172.883.22 1.402l.1.104.022.26.008.104c.065.914.073 1.77.074 1.957v.075c-.001.194-.01 1.108-.082 2.06l-.008.105-.009.104c-.05.572-.124 1.14-.235 1.558a2.01 2.01 0 0 1-1.415 1.42c-1.16.312-5.569.334-6.18.335h-.142c-.309 0-1.587-.006-2.927-.052l-.17-.006-.087-.004-.171-.007-.171-.007c-1.11-.049-2.167-.128-2.654-.26a2.01 2.01 0 0 1-1.415-1.419c-.111-.417-.185-.986-.235-1.558L.09 9.82l-.008-.104A31 31 0 0 1 0 7.68v-.123c.002-.215.01-.958.064-1.778l.007-.103.003-.052.008-.104.022-.26.01-.104c.048-.519.119-1.023.22-1.402a2.01 2.01 0 0 1 1.415-1.42c.487-.13 1.544-.21 2.654-.26l.17-.007.172-.006.086-.003.171-.007A100 100 0 0 1 7.858 2zM6.4 5.209v4.818l4.157-2.408z"/></svg></a>
+        <a class="footer__sns-a" href="https://www.instagram.com/superplat.official/" target="_blank" rel="noopener noreferrer" aria-label="SuperPlat Instagram"><svg class="ic ic--instagram" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.9 3.9 0 0 0-1.417.923A3.9 3.9 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.9 3.9 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.9 3.9 0 0 0-.923-1.417A3.9 3.9 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 7.998 0zm-.717 1.442h.718c2.136 0 2.389.007 3.232.046.78.035 1.204.166 1.486.275.373.145.64.319.92.599s.453.546.598.919c.11.281.24.705.275 1.485.039.843.047 1.096.047 3.231s-.008 2.389-.047 3.232c-.035.78-.166 1.203-.275 1.485a2.5 2.5 0 0 1-.599.919c-.28.28-.546.453-.92.598-.28.11-.704.24-1.485.276-.843.038-1.096.047-3.232.047s-2.39-.009-3.233-.047c-.78-.036-1.203-.166-1.485-.276a2.5 2.5 0 0 1-.92-.598 2.5 2.5 0 0 1-.6-.92c-.109-.281-.24-.705-.275-1.485-.038-.843-.046-1.096-.046-3.233s.008-2.388.046-3.231c.036-.78.166-1.204.276-1.486.145-.373.319-.64.599-.92s.546-.453.92-.598c.282-.11.705-.24 1.485-.276.738-.034 1.024-.044 2.515-.045zm4.988 1.328a.96.96 0 1 0 0 1.92.96.96 0 0 0 0-1.92M8 3.892a4.108 4.108 0 1 0 0 8.217 4.108 4.108 0 0 0 0-8.217M8 5.334a2.666 2.666 0 1 1 0 5.333 2.666 2.666 0 0 1 0-5.333"/></svg></a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- 페일세이프 — 메인 스크립트가 죽어도 3.5초 뒤 히어로가 완성 상태로 보입니다 -->
+<script>
+/* 이 페이지에는 히어로 시네마틱 인트로가 없으므로 배너 이미지가 디코드되면 바로 시작합니다.
+   (실패해도 1.2초 뒤 페일세이프로 반드시 켜집니다) */
+(function(){
+  var r=document.documentElement, on=function(){r.classList.add('is-ready')};
+  var img=document.querySelector('.phero__img');
+  if(img && img.decode) img.decode().then(on).catch(on); else addEventListener('load',on);
+  setTimeout(on,1200);
+})();
+</script>
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   SuperPlat WORLD & IP — interaction
+   ⚠️ 이 스크립트가 통째로 실패해도 페이지는 정적으로 정상입니다.
+      (인트로는 위의 페일세이프가 3.5초 뒤 .is-ready 를 붙입니다)
+   ══════════════════════════════════════════════════════════════════ */
+(function () {
+'use strict';
+
+var root = document.documentElement;
+var reduceMQ = matchMedia('(prefers-reduced-motion: reduce)');
+var hoverMQ  = matchMedia('(hover: hover) and (pointer: fine)');
+var reduce   = reduceMQ.matches;
+var $  = function (s, c) { return (c || document).querySelector(s); };
+var $$ = function (s, c) { return [].slice.call((c || document).querySelectorAll(s)); };
+var clamp = function (v, a, b) { return v < a ? a : v > b ? b : v; };
+
+/* ── 2. i18n ─────────────────────────────────────────────────────── */
+var EN = {
+  nav1:'About', nav2:'World & IP', nav3:'News', nav4:'Support',
+  download:'Download', login:'Log in', explore:'Explore worlds',
+  terms:'Terms', privacy:'Privacy',
+  wa:'Meet the spaces that just opened', wb:'and the characters who just joined.',
+  wc:'World & IP',
+  wt1:'All', wt2:'World', wt3:'IP character', wt4:'Search',
+  wmore:'Load more', wempty:'Nothing here yet.',
+  ctaa:'The door is open.', ctab:'Come in right now!', ctac:'Go to download'
+};
+var KO = {};
+$$('[data-i18n]').forEach(function (el) { KO[el.dataset.i18n] = el.innerHTML; });
+
+function setLang(lang) {
+  var dict = lang === 'en' ? EN : KO;
+  /* 언어는 사이트 공용 상태입니다 — 저장 · <html lang> · 구독자 통지까지 담당합니다
+     (assets/sp-i18n.js · localStorage['sp.locale']). 페이지를 옮겨도 유지됩니다. */
+  if (window.SPI18N) window.SPI18N.set(lang);
+  $$('[data-i18n]').forEach(function (el) {
+    var v = dict[el.dataset.i18n];
+    if (v != null) el.innerHTML = v;
+  });
+  root.lang = lang === 'en' ? 'en' : 'ko';
+  $$('[data-lang]').forEach(function (b) { b.setAttribute('aria-current', String(b.dataset.lang === lang)); });
+  if (window.__worldGridRender) window.__worldGridRender();
+}
+$$('[data-lang]').forEach(function (b) {
+  b.addEventListener('click', function () { setLang(b.dataset.lang); closeLang(); });
+});
+/* 저장된 언어를 첫 렌더 전에 적용합니다. <html lang> 은 sp-i18n.js 가 이미
+   확정해 두었으므로, 여기서는 헤더/드로어의 data-i18n 문자열만 맞춥니다. */
+if (window.SPI18N && window.SPI18N.get() === 'en') setLang('en');
+
+/* ── 3. HEADER ───────────────────────────────────────────────────── */
+var header = $('#header'), burger = $('#burger'), drawer = $('#drawer');
+var lang = $('#lang'), langBtn = $('#langBtn');
+
+var ticking = false;
+function onScroll() {
+  if (ticking) return;
+  ticking = true;
+  requestAnimationFrame(function () {
+    header.classList.toggle('is-scrolled', window.scrollY > 40);
+    ticking = false;
+  });
+}
+addEventListener('scroll', onScroll, { passive: true });
+onScroll();
+
+function closeLang() { lang.classList.remove('is-open'); langBtn.setAttribute('aria-expanded', 'false'); }
+langBtn.addEventListener('click', function (e) {
+  e.stopPropagation();
+  var open = lang.classList.toggle('is-open');
+  langBtn.setAttribute('aria-expanded', String(open));
+});
+document.addEventListener('click', function (e) { if (!lang.contains(e.target)) closeLang(); });
+
+var scrollY = 0;
+function setMenu(open) {
+  root.classList.toggle('is-menu', open);
+  burger.setAttribute('aria-expanded', String(open));
+  burger.setAttribute('aria-label', open ? '메뉴 닫기' : '메뉴 열기');
+  if (open) { drawer.removeAttribute('inert'); } else { drawer.setAttribute('inert', ''); }
+  /* body scroll lock — iOS 포함 */
+  if (open) {
+    scrollY = window.scrollY;
+    document.body.style.top = -scrollY + 'px';
+    document.body.classList.add('is-locked');
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+  } else {
+    document.body.classList.remove('is-locked');
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.width = '';
+    window.scrollTo(0, scrollY);
+  }
+}
+burger.addEventListener('click', function () { setMenu(!root.classList.contains('is-menu')); });
+$$('a', drawer).forEach(function (a) { a.addEventListener('click', function () { setMenu(false); }); });
+addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') { setMenu(false); closeLang(); }
+});
+matchMedia('(min-width:992px)').addEventListener('change', function (e) { if (e.matches) setMenu(false); });
+
+/* ── 4. REVEAL ───────────────────────────────────────────────────── */
+/* 관찰 대상 — 헤드라인(.section-head) · 본문/카드(.reveal) · 큰 비주얼(.rv-img) 뿐.
+   장식 요소는 의도적으로 정지 상태로 둡니다(§scroll rhythm). */
+var revealItems = $$('.reveal, .section-head, .rv-img, .cta__art');
+if ('IntersectionObserver' in window && !reduce) {
+  var io = new IntersectionObserver(function (es) {
+    es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); } });
+  }, { rootMargin: '0px 0px -14% 0px', threshold: .12 });
+  revealItems.forEach(function (el) { io.observe(el); });
+} else {
+  revealItems.forEach(function (el) { el.classList.add('is-in'); });
+}
+
+})();
+</script>
+<script>
+
+/* ══════════════════════════════════════════════════════════════════
+   W. WORLD & IP — data-driven grid
+   ✏️ 카드 추가·교체는 아래 ITEMS 배열만 고치면 됩니다. DOM 하드코딩 없음.
+      kind : 'world' | 'ip'   (탭 필터 · 배지 라벨)
+      img  : assets/ 내 파일명
+      bg   : IP 캐릭터 PNG 의 원본 배경색 (contain 배치 시 여백 채움)
+   ══════════════════════════════════════════════════════════════════ */
+(function () {
+'use strict';
+var root = document.documentElement;
+var $  = function (s, c) { return (c || document).querySelector(s); };
+var $$ = function (s, c) { return [].slice.call((c || document).querySelectorAll(s)); };
+var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+var META_KO = '전시 / 도슨트 캐릭터', META_EN = 'Exhibition / Docent character';
+var LABEL = { world: { ko:'월드', en:'World' }, ip: { ko:'IP캐릭터', en:'IP character' } };
+
+/* 카드 이름 번역 — 공용 사전(assets/sp-i18n.js)에 항목이 있을 때만 영문으로.
+   고유명사는 사전에 넣지 않으면 원문 그대로 나가므로 안전합니다. */
+function ttl(s) {
+  return (root.lang === 'en' && window.SPI18N) ? window.SPI18N.t(s) : s;
+}
+
+/* ── 월드 카드 = assets/sp-worlds.js (홈 캐러셀과 공용) ────────────────
+   홈의 「오늘은 어디부터 가볼까요?」 캐러셀과 **같은 배열**에서 만듭니다.
+   그래서 공간 이름 · 이미지 · 국문 설명 · 순서가 두 화면에서 갈라질 수 없습니다.
+   공간을 추가하거나 문구를 고치려면 이 파일이 아니라 sp-worlds.js 를 고치세요.
+
+     img    = 카드 썸네일 (assets/ 아래 실제 파일. 홈과 같은 파일을 참조합니다)
+     detail = 상세보기(Lightbox) 원본. 없으면 img 를 그대로 씁니다.
+     desc   = 카드 서브텍스트이자 상세보기 설명입니다 (하나의 source).
+              영문은 assets/sp-i18n.js 사전이 같은 문장을 키로 찾아 줍니다.
+   ⚠️ 아직 이미지를 받지 못한 공간은 .ready() 가 걸러 냅니다 —
+      여기서 따로 필터링하거나 placeholder 를 만들지 마세요.                */
+var WORLD_ITEMS = (window.SPWorlds ? window.SPWorlds.ready() : []).map(function (s) {
+  var o = { kind:'world', title:s.name, img:s.img, desc:s.ko };
+  if (s.detail) o.detail = s.detail;
+  return o;
+});
+
+var ITEMS = WORLD_ITEMS.concat([
+  /* ── IP 캐릭터 (시안 순서 그대로) ────────────────────────────── */
+  /* pos = object-position. 프레임(335:232)보다 세로로 긴 원본만 값을 줍니다.
+     cover 로 잘려 나갈 자리를 얼굴 아래쪽으로 밀어, 머리·표정이 남게 합니다.
+     원본이 이미 335×232 인 카드(KU · 엔카이브 · 해피넛츠 · 스파이시 패밀리 ·
+     보리)는 잘리는 곳이 없어 pos 가 필요 없습니다.                        */
+  /* 이미지는 index.html 캐릭터 갤러리 · 카드 · 상세보기가 같은 파일 하나
+     (char-cat.png)를 씁니다. 원본이 238×238 정사각이라 잘리는 곳이 없습니다. */
+  { kind:'ip', title:'보리',          img:'char-cat.png',       detail:'char-cat-detail.png',       bg:'#FFEDAB' , desc:'따뜻한 미소로 반겨주는 사랑스러운 친구' },
+  { kind:'ip', title:'푸푸',          img:'char-monsters.png',       detail:'char-monsters-detail.png',  bg:'#DFCCEC' , desc:'복슬복슬한 매력으로 즐거움을 전하는 친구들' },
+  { kind:'ip', title:'블루콘',        img:'char-polarbear.png',       detail:'char-polarbear-detail.png', bg:'#99A9C6', pos:'center 18%' , desc:'달콤한 상상력을 품은 특별한 친구' },
+  { kind:'ip', title:'두유',          img:'char-sprouts.png',       detail:'char-sprouts-detail.png',   bg:'#889A7A' , desc:'개성 넘치는 친구들과 함께하는 유쾌한 이야기' },
+  { kind:'ip', title:'KU',            img:'char-cow.png',       detail:'char-cow-detail.png',       bg:'#CBC6A7' , desc:'캠퍼스의 매력을 담은 사랑스러운 친구들' },
+  { kind:'ip', title:'키키',          img:'char-pink.png',       detail:'char-pink-detail.png',      bg:'#FFCC9F', pos:'center 30%' , desc:'작은 몸에 커다란 호기심을 품은 친구' },
+  { kind:'ip', title:'올드보이',      img:'char-suit.png',       detail:'char-suit-detail.png',      bg:'#7A7A7A', pos:'center 18%' , desc:'묵직한 존재감과 특별한 이야기를 가진 캐릭터' },
+  { kind:'ip', title:'스파이시 패밀리', img:'char-duo.png',       detail:'char-duo-detail.png',      bg:'#C48D8D', pos:'center 18%' , desc:'톡톡 튀는 개성으로 뭉친 유쾌한 패밀리' },
+  { kind:'ip', title:'부기',          img:'char-duck.png',       detail:'char-duck-detail.png',      bg:'#BFBFBF', pos:'center 24%' , desc:'엉뚱하고 귀여운 매력으로 가득한 친구' },
+  { kind:'ip', title:'엔카이브',      img:'char-band.png',       detail:'char-band-detail.png',      bg:'#B9B7E8' , desc:'여섯 멤버가 보여주는 다채로운 매력' },
+  { kind:'ip', title:'마루',          img:'char-puppy.png',       detail:'char-puppy-detail.png',     bg:'#99BEC6', pos:'center 30%' , desc:'포근한 매력으로 마음을 사로잡는 친구' },
+  { kind:'ip', title:'해피넛츠',      img:'char-crowd.png',       detail:'char-crowd-detail.png',     bg:'#FFABEF' , desc:'각기 다른 개성으로 가득한 즐거운 친구들' },
+  { kind:'ip', title:'스파이시 패밀리', img:'char-robots.png',       detail:'char-robots-detail.png',   bg:'#FFABAC' , desc:'톡톡 튀는 개성으로 뭉친 유쾌한 패밀리' },
+  { kind:'ip', title:'스푸키',        img:'char-blob.png',       detail:'char-blob-detail.png',      bg:'#A8EEDD', pos:'center 30%' , desc:'낯설어서 더 궁금한 엉뚱하고 특별한 친구' }
+]);
+
+var grid = $('#wGrid'), moreBtn = $('#wMore'), moreWrap = $('#wMoreWrap'), emptyEl = $('#wEmpty');
+if (!grid) return;
+
+var PAGE_D = 16, PAGE_M = 4;        /* 시안: PC 15~16장 + 더보기 / 모바일 4장 + 더보기 */
+var pageSize = function () { return innerWidth <= 767 ? PAGE_M : PAGE_D; };
+var filter = 'all', shown = pageSize();
+var io = ('IntersectionObserver' in window && !reduce)
+  ? new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); } });
+    }, { rootMargin: '0px 0px -10% 0px', threshold: .08 })
+  : null;
+
+function listFor(f) { return f === 'all' ? ITEMS : ITEMS.filter(function (it) { return it.kind === f; }); }
+
+function card(it, i) {
+  var en = root.lang === 'en';
+  var a = document.createElement('div');
+  a.className = 'wcard' + (it.kind === 'ip' && !it.cover ? ' wcard--ip' : '');
+  a.setAttribute('role', 'listitem');
+  a.style.setProperty('--i', String(i % 8));
+
+  var shell = document.createElement('a');
+  shell.className = 'wcard__shell';
+  shell.href = '#';                      /* 상세 페이지 연결 지점 */
+  shell.dataset.wlb = String(i);         /* 갤러리에서 쓸 "현재 보이는 목록" 안의 순서 */
+  shell.setAttribute('aria-label', ttl(it.title) + ' — ' + (en ? LABEL[it.kind].en : LABEL[it.kind].ko));
+
+  var clip = document.createElement('div');
+  clip.className = 'wcard__clip';
+  if (it.bg && !it.cover) clip.style.setProperty('--ipbg', it.bg);
+  var img = document.createElement('img');
+  img.src = 'assets/' + it.img;
+  /* 이미지마다 "무엇을 보여줄지"만 다르게 — Fill 규칙(cover)은 전부 같습니다 */
+  if (it.pos) img.style.objectPosition = it.pos;
+  img.alt = '';                          /* 제목이 바로 아래 있으므로 장식 취급 */
+  img.setAttribute('aria-hidden', 'true');
+  img.width = 335; img.height = 232;
+  img.decoding = 'async';
+  img.draggable = false;
+  img.loading = i < 16 ? 'eager' : 'lazy';   /* 첫 화면 4행은 즉시, 더보기 분량은 lazy */
+  clip.appendChild(img);
+
+  var body = document.createElement('div');
+  body.className = 'wcard__body';
+  var badge = document.createElement('span');
+  badge.className = 'wcard__badge';
+  badge.textContent = en ? LABEL[it.kind].en : LABEL[it.kind].ko;
+  var h = document.createElement('p');
+  h.className = 'wcard__title';
+  /* 공용 사전에 영문이 있으면 그것을, 없으면 한국어 원문을 그대로 씁니다.
+     카드와 상세보기가 같은 경로를 쓰므로 이름이 갈라질 수 없습니다. */
+  var hTitle = ttl(it.title);
+  h.setAttribute('lang', /[가-힣]/.test(hTitle) ? 'ko' : 'en');
+  h.textContent = hTitle;
+  var m = document.createElement('p');
+  m.className = 'wcard__meta';
+  m.textContent = it.desc ? ttl(it.desc) : (en ? META_EN : META_KO);
+  body.appendChild(badge); body.appendChild(h); body.appendChild(m);
+
+  shell.appendChild(clip); shell.appendChild(body);
+  a.appendChild(shell);
+  return a;
+}
+
+/* 갤러리가 좌우로 이동하는 범위 = "지금 화면에 보이는 카드" 그대로입니다.
+   탭(전체 / 월드 / IP캐릭터)과 더보기 상태가 그대로 반영되고,
+   갤러리를 닫아도 스크롤 · 필터 · 표시 개수가 하나도 바뀌지 않습니다. */
+var visible = [];
+
+function render() {
+  var list = listFor(filter).slice(0, shown);
+  visible = list;
+  grid.textContent = '';
+  var frag = document.createDocumentFragment();
+  list.forEach(function (it, i) { frag.appendChild(card(it, i)); });
+  grid.appendChild(frag);
+  if (io) $$('.wcard', grid).forEach(function (el) { io.observe(el); });
+  else $$('.wcard', grid).forEach(function (el) { el.classList.add('is-in'); });
+
+  var total = listFor(filter).length;
+  moreWrap.hidden = shown >= total || total === 0;
+  emptyEl.hidden = total !== 0;
+}
+
+$$('.wtab').forEach(function (b) {
+  b.addEventListener('click', function () {
+    if (filter === b.dataset.filter) return;
+    filter = b.dataset.filter;
+    shown = pageSize();
+    $$('.wtab').forEach(function (x) { x.setAttribute('aria-selected', String(x === b)); });
+    render();
+  });
+  /* 키보드 — 좌우 화살표로 탭 이동 */
+  b.addEventListener('keydown', function (e) {
+    var tabs = $$('.wtab'), i = tabs.indexOf(b);
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+      n.focus(); n.click();
+    }
+  });
+});
+
+moreBtn.addEventListener('click', function () {
+  shown += pageSize();
+  render();
+});
+
+/* 브레이크포인트가 바뀌면 페이지 크기 단위만 다시 맞춥니다 (표시 개수는 줄이지 않음) */
+var wasMobile = innerWidth <= 767;
+addEventListener('resize', function () {
+  var m = innerWidth <= 767;
+  if (m !== wasMobile) { wasMobile = m; shown = Math.max(shown, pageSize()); render(); }
+}, { passive: true });
+
+/* ══════════════════════════════════════════════════════════════════════════
+   GALLERY LIGHTBOX
+   ──────────────────────────────────────────────────────────────────────────
+   · 데이터는 카드와 같은 ITEMS 하나만 씁니다 (별도 갤러리 배열 없음).
+   · 좌우 이동 범위는 visible — 즉 현재 탭 / 더보기 상태 그대로입니다.
+   · 상세 페이지가 아니라 레이어라서 닫으면 스크롤 위치가 정확히 복원됩니다.
+   ══════════════════════════════════════════════════════════════════════════ */
+var lb, lbImg, lbInfo, lbTitle, lbMeta, lbDesc, lbIdx, lbPrev, lbNext, lbClose, lbStage;
+var lbIndex = -1, lbLastFocus = null, lbLockY = 0, lbSwapT = null;
+var EASE_LB = 'cubic-bezier(.22,1,.36,1)';
+
+var ICON = {
+  x:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/></svg>',
+  l:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0"/></svg>',
+  r:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708"/></svg>'
+};
+
+function lbBuild() {
+  if (lb) return;
+  var en = root.lang === 'en';
+  lb = document.createElement('div');
+  lb.className = 'wlb';
+  lb.hidden = true;
+  lb.setAttribute('role', 'dialog');
+  lb.setAttribute('aria-modal', 'true');
+  lb.tabIndex = -1;                      /* 열릴 때 포커스를 받는 자리 (버튼에 링이 생기지 않게) */
+  lb.setAttribute('aria-label', en ? 'World & IP gallery' : 'World & IP 갤러리');
+  lb.innerHTML =
+    '<div class="wlb__dim" data-wlb-dim></div>' +
+    '<button class="wlb__close" type="button">' + ICON.x + '</button>' +
+    '<button class="wlb__nav wlb__nav--prev" type="button">' + ICON.l + '</button>' +
+    '<button class="wlb__nav wlb__nav--next" type="button">' + ICON.r + '</button>' +
+    '<figure class="wlb__stage">' +
+      '<img class="wlb__img" alt="">' +
+      '<figcaption class="wlb__info">' +
+        '<p class="wlb__title"></p>' +
+        '<p class="wlb__meta"></p>' +
+        '<p class="wlb__desc"></p>' +
+        '<p class="wlb__idx"></p>' +
+      '</figcaption>' +
+    '</figure>';
+  document.body.appendChild(lb);
+
+  lbImg   = lb.querySelector('.wlb__img');
+  lbStage = lb.querySelector('.wlb__stage');
+  lbInfo  = lb.querySelector('.wlb__info');
+  lbTitle = lb.querySelector('.wlb__title');
+  lbMeta  = lb.querySelector('.wlb__meta');
+  lbDesc  = lb.querySelector('.wlb__desc');
+  lbIdx   = lb.querySelector('.wlb__idx');
+  lbPrev  = lb.querySelector('.wlb__nav--prev');
+  lbNext  = lb.querySelector('.wlb__nav--next');
+  lbClose = lb.querySelector('.wlb__close');
+
+  lbClose.addEventListener('click', lbHide);
+  lbPrev.addEventListener('click', function () { lbGo(-1); });
+  lbNext.addEventListener('click', function () { lbGo(1); });
+  /* 배경(딤)만 닫기 — 이미지 · 정보 · 화살표에서는 닫히지 않습니다 */
+  lb.querySelector('[data-wlb-dim]').addEventListener('click', lbHide);
+
+  /* 모바일 스와이프 — 가로 제스처만, 세로 스크롤과 충돌하지 않게 임계값을 둡니다 */
+  var sx = 0, sy = 0, tracking = false;
+  lbStage.addEventListener('pointerdown', function (e) {
+    if (e.pointerType === 'mouse') return;
+    sx = e.clientX; sy = e.clientY; tracking = true;
+  }, { passive: true });
+  lbStage.addEventListener('pointerup', function (e) {
+    if (!tracking) return; tracking = false;
+    var dx = e.clientX - sx, dy = e.clientY - sy;
+    if (Math.abs(dx) < 48) return;                 /* 손가락이 조금 움직인 정도로는 안 넘어갑니다 */
+    if (Math.abs(dx) < Math.abs(dy) * 1.4) return; /* 세로 제스처면 무시 */
+    lbGo(dx < 0 ? 1 : -1);
+  }, { passive: true });
+  lbStage.addEventListener('pointercancel', function () { tracking = false; }, { passive: true });
+
+  lbLabels();
+}
+
+function lbLabels() {
+  if (!lb) return;
+  var en = root.lang === 'en';
+  lb.setAttribute('aria-label', en ? 'World & IP gallery' : 'World & IP 갤러리');
+  lbClose.setAttribute('aria-label', en ? 'Close' : '닫기');
+  lbPrev.setAttribute('aria-label', en ? 'Previous image' : '이전 이미지');
+  lbNext.setAttribute('aria-label', en ? 'Next image' : '다음 이미지');
+}
+
+/* 화면이 좌우로 밀리지 않게 스크롤바 폭만큼 보정하면서 잠급니다 */
+function lbLock() {
+  lbLockY = window.scrollY || window.pageYOffset || 0;
+  var sw = window.innerWidth - document.documentElement.clientWidth;
+  var b = document.body;
+  if (sw > 0) b.style.paddingRight = sw + 'px';
+  b.style.position = 'fixed';
+  b.style.top = (-lbLockY) + 'px';
+  b.style.left = '0'; b.style.right = '0'; b.style.width = '100%';
+}
+function lbUnlock() {
+  var b = document.body;
+  b.style.position = ''; b.style.top = ''; b.style.left = ''; b.style.right = '';
+  b.style.width = ''; b.style.paddingRight = '';
+  /* ⚠️ position:fixed 동안 문서 높이가 뷰포트만큼 줄어 있습니다.
+     스타일을 되돌린 "직후"에 바로 scrollTo 하면 아직 짧은 높이로 잘려
+     엉뚱한 위치로 갑니다. 레이아웃을 한 번 강제로 계산시킨 뒤 이동합니다. */
+  void b.offsetHeight;
+  window.scrollTo(0, lbLockY);              /* 보고 있던 자리로 정확히 복귀 */
+}
+
+function lbPreload(i) {
+  [i - 1, i + 1].forEach(function (k) {
+    if (k < 0 || k >= visible.length) return;
+    var im = new Image();
+    im.decoding = 'async';
+    im.src = detailSrc(visible[k]);         /* ±1 장만 — 대량 선로딩은 하지 않습니다 */
+  });
+}
+
+/* 상세보기 이미지 — detail 이 있으면 원본, 없으면 카드 썸네일을 그대로 씁니다.
+   카드(Thumbnail)와 Lightbox(Detail)의 source 를 여기 한 곳에서만 정합니다. */
+function detailSrc(it) { return 'assets/' + (it.detail || it.img); }
+
+function lbPaint(i) {
+  var it = visible[i], en = root.lang === 'en';
+  lbImg.style.removeProperty('--cap');
+  /* WORLD 는 16:9 고정 프레임(cover), IP 캐릭터는 원본 비율(contain) 그대로 */
+  var isWorld = it.kind === 'world';
+  lbImg.classList.toggle('is-world', isWorld);
+  lbStage.classList.toggle('is-world', isWorld);
+  lbImg.classList.toggle('is-ip', !isWorld);
+  lbStage.classList.toggle('is-ip', !isWorld);
+  lbImg.src = detailSrc(it);
+  lbImg.alt = ttl(it.title) + ' — ' + (en ? LABEL[it.kind].en : LABEL[it.kind].ko);
+  if (lbImg.complete && lbImg.naturalWidth) lbFit(); else lbImg.onload = lbFit;
+  var lbT = ttl(it.title);
+  lbTitle.textContent = lbT;
+  lbTitle.setAttribute('lang', /[가-힣]/.test(lbT) ? 'ko' : 'en');
+  lbMeta.textContent = en ? LABEL[it.kind].en : LABEL[it.kind].ko;
+  lbDesc.textContent = it.desc ? ttl(it.desc) : (en ? META_EN : META_KO);
+  lbIdx.textContent = pad(i + 1) + ' / ' + pad(visible.length);
+  lbPrev.disabled = visible.length < 2;
+  lbNext.disabled = visible.length < 2;
+  lbPreload(i);
+}
+function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+/* 표시 크기 계산 — max-width 만으로는 원본이 작은 이미지를 "키울" 수 없어서
+   실제 폭/높이를 직접 정합니다. 비율은 항상 원본 그대로이고,
+   원본보다 1.8배를 넘겨 늘리지 않아 IP 캐릭터 PNG 가 뭉개지지 않습니다.
+     PC     폭 min(72vw, 1100, 원본×1.8) · 높이 72vh
+     Mobile 폭 화면폭 - 40 (좌우 20px) · 높이 60dvh                        */
+function lbFit() {
+  if (!lbImg) return;
+  var vw = window.innerWidth, vh = window.innerHeight;
+  var mobile = vw <= 767;
+
+  /* ── WORLD — 항상 16:9 프레임 ─────────────────────────────────────────
+     원본이 16:9 이므로 cover 로도 잘리는 곳이 없고, 흰 여백도 생기지 않습니다.
+     세로는 아래 정보 블록(제목·카테고리·설명·번호)이 들어갈 자리를 남깁니다.
+       PC     폭 min(86vw, 1400) · 높이 62vh 안에서 16:9 로 맞춤
+       Mobile 폭 화면폭 - 40 (좌우 20px 안전 여백) · 16:9                  */
+  var it = (lbIndex >= 0 && visible[lbIndex]) ? visible[lbIndex] : null;
+  if (it && it.kind === 'world') {
+    var wMax;
+    if (mobile) {
+      wMax = vw - 40;                 /* 좌우 20px 안전 여백 (좌우 이동 UI 는 화면 아래) */
+    } else {
+      /* 좌우 화살표(52px)가 이미지 위에 겹치지 않도록 그 자리를 먼저 뺍니다.
+         inset 은 CSS 의 clamp(8px, 2.4vw, 40px) 와 같은 값입니다. */
+      var inset = Math.min(Math.max(8, vw * 0.024), 40);
+      var reserve = (inset + 52 + 12) * 2;
+      wMax = Math.min(vw * 0.86, 1400, vw - reserve);
+    }
+    var hMax = mobile ? (vh * 0.52) : (vh * 0.62);
+    var w = Math.min(wMax, hMax * 16 / 9);
+    lbImg.style.width  = Math.round(w) + 'px';
+    lbImg.style.height = Math.round(w * 9 / 16) + 'px';
+    return;
+  }
+
+  /* ── IP 캐릭터 — 1:1 정사각 프레임 ────────────────────────────────────
+     상세 원본이 1080×1080 이라 정사각 박스 안에서 전체가 그대로 보입니다
+     (crop 없음 · 왜곡 없음). WORLD 의 16:9 와 같은 컴포넌트에서 비율만 분기합니다. */
+  if (it && it.kind === 'ip' && it.detail) {
+    var sMax;
+    if (mobile) {
+      sMax = Math.min(vw - 40, vh * 0.56);
+    } else {
+      var ins = Math.min(Math.max(8, vw * 0.024), 40);
+      sMax = Math.min(vw * 0.86 - (ins + 52 + 12) * 2, vh * 0.62, 620);
+    }
+    sMax = Math.max(160, Math.round(sMax));
+    lbImg.style.width = sMax + 'px';
+    lbImg.style.height = sMax + 'px';
+    return;
+  }
+
+  /* ── detail 이 없는 항목 — 원본 비율 그대로(기존 동작 유지) ───────────── */
+  if (!lbImg.naturalWidth) return;
+  var nw = lbImg.naturalWidth, nh = lbImg.naturalHeight;
+  var maxW = mobile ? (vw - 40) : Math.min(vw * 0.72, 1100, nw * 1.8);
+  var maxH = mobile ? (vh * 0.60) : (vh * 0.72);
+  var s = Math.min(maxW / nw, maxH / nh);
+  if (!mobile) s = Math.min(s, 1.8);   /* 원본보다 1.8배 넘게 늘리지 않습니다 */
+  lbImg.style.width  = Math.round(nw * s) + 'px';
+  lbImg.style.height = Math.round(nh * s) + 'px';
+}
+addEventListener('resize', function () { if (lb && !lb.hidden) lbFit(); }, { passive: true });
+
+function lbShow(i) {
+  if (!visible.length) return;
+  lbBuild(); lbLabels();
+  lbIndex = (i % visible.length + visible.length) % visible.length;
+  lbLastFocus = document.activeElement;
+  lbPaint(lbIndex);
+  lbLock();
+  lb.hidden = false;
+  requestAnimationFrame(function () { lb.classList.add('is-open'); });
+  lb.focus({ preventScroll: true });   /* 이후 Tab 은 닫기 → 이전 → 다음 순서로 순환합니다 */
+}
+
+function lbHide() {
+  if (!lb || lb.hidden) return;
+  lb.classList.remove('is-open');
+  lb.classList.add('is-closing');
+  var done = function () {
+    lb.hidden = true;
+    lb.classList.remove('is-closing');
+    lbImg.removeAttribute('src');
+    lbUnlock();
+    if (lbLastFocus && lbLastFocus.focus) lbLastFocus.focus({ preventScroll: true });
+    lbIndex = -1;
+  };
+  if (reduce) done(); else setTimeout(done, 280);
+}
+
+/* 좌우 이동 — 큰 캐러셀처럼 화면이 밀리지 않고, 이미지만 부드럽게 교체됩니다 */
+function lbGo(dir) {
+  if (lbIndex < 0 || visible.length < 2) return;
+  var next = (lbIndex + dir + visible.length) % visible.length;
+  lbIndex = next;
+  if (reduce) { lbPaint(next); return; }
+
+  clearTimeout(lbSwapT);
+  lbImg.style.transition  = 'opacity 160ms ' + EASE_LB + ', transform 160ms ' + EASE_LB;
+  lbInfo.style.transition = 'opacity 160ms ' + EASE_LB + ', filter 160ms ' + EASE_LB;
+  lbImg.style.opacity = '0';
+  lbImg.style.transform = 'translateX(' + (dir > 0 ? -12 : 12) + 'px)';
+  lbInfo.style.opacity = '0';
+  lbInfo.style.filter = 'blur(4px)';
+
+  lbSwapT = setTimeout(function () {
+    lbPaint(next);
+    lbImg.style.transition = 'none';
+    lbInfo.style.transition = 'none';
+    lbImg.style.transform = 'translateX(' + (dir > 0 ? 12 : -12) + 'px)';
+    void lbImg.offsetWidth;                        /* reflow — 시작 상태를 확정합니다 */
+    lbImg.style.transition  = 'opacity 300ms ' + EASE_LB + ', transform 300ms ' + EASE_LB;
+    lbInfo.style.transition = 'opacity 300ms ' + EASE_LB + ', filter 300ms ' + EASE_LB;
+    lbImg.style.opacity = '1';
+    lbImg.style.transform = 'translateX(0)';
+    lbInfo.style.opacity = '1';
+    lbInfo.style.filter = 'blur(0px)';
+  }, 160);
+}
+
+/* 카드 클릭 — 리스트 페이지를 떠나지 않고 갤러리를 엽니다 */
+grid.addEventListener('click', function (e) {
+  var shell = e.target.closest ? e.target.closest('.wcard__shell') : null;
+  if (!shell || !grid.contains(shell)) return;
+  e.preventDefault();
+  lbShow(parseInt(shell.dataset.wlb, 10) || 0);
+});
+
+/* 키보드 — ESC 닫기 · ←/→ 이동 · Tab 은 갤러리 안에서만 순환(포커스 트랩) */
+document.addEventListener('keydown', function (e) {
+  if (!lb || lb.hidden) return;
+  if (e.key === 'Escape') { e.preventDefault(); lbHide(); return; }
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); lbGo(-1); return; }
+  if (e.key === 'ArrowRight') { e.preventDefault(); lbGo(1);  return; }
+  if (e.key === 'Tab') {
+    var f = [lbClose, lbPrev, lbNext].filter(function (b) { return !b.disabled; });
+    if (!f.length) return;
+    var i = f.indexOf(document.activeElement);
+    if (i < 0) { e.preventDefault(); f[e.shiftKey ? f.length - 1 : 0].focus(); return; }
+    e.preventDefault();
+    var n = e.shiftKey ? (i <= 0 ? f.length - 1 : i - 1) : (i === f.length - 1 ? 0 : i + 1);
+    f[n].focus();
+  }
+});
+
+/* 언어 전환 시 카드 텍스트도 다시 그립니다 */
+window.__worldGridRender = function () {
+  render();
+  lbLabels();
+  if (lb && !lb.hidden && lbIndex >= 0) lbPaint(lbIndex);
+};
+
+render();
+})();
+
+</script>
+</body>
+</html>

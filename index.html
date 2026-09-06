@@ -1,0 +1,3149 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+<!-- Theme runtime — 첫 페인트 전에 data-theme 을 확정합니다 (FOUC 방지).
+     ⚠️ defer / async 금지: 페이지 <style> 보다 먼저 동기 실행되어야 합니다. -->
+<script src="assets/sp-theme.js"></script>
+
+<!-- i18n runtime — 첫 페인트 전에 <html lang> 을 확정합니다.
+     ⚠️ defer / async 금지: 본문을 JS 로 그리는 페이지가 있습니다. -->
+<script src="assets/sp-i18n.js"></script>
+<!-- WORLD 공간 데이터 (홈 캐러셀 · WORLD & IP 공용 Single Source of Truth) -->
+<script src="assets/sp-worlds.js"></script>
+<title>SuperPlat — 혼자 보던 세계에서 다같이 노는 세계로</title>
+<meta name="description" content="나만의 공간이 미술관이 되고, 상상이 되고, 캠퍼스가 되는 곳. SuperPlat.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23191F28'/%3E%3Ctext x='16' y='22' font-size='16' font-family='serif' font-weight='700' fill='%23fff' text-anchor='middle'%3ES%3C/text%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="assets/fonts/PretendardVariable.woff2" crossorigin>
+<style>
+/* ══ Pretendard Variable (OFL 1.1 · assets/fonts/LICENSE.txt) ══════════
+   사이트 전체가 이 한 벌만 씁니다. weight 100~900 을 하나의 파일이 커버하므로
+   400/500/600/700 을 자유롭게 쓰면서도 요청 수는 1개입니다.
+   ⚠️ CDN 을 먼저 두는 이유: index.html 을 그냥 더블클릭해 열면(file://) 브라우저가
+      로컬 폰트 파일을 CORS 로 막습니다. CDN 은 file:// 에서도 로드됩니다.
+      서버(localhost·GitHub Pages 등)로 열면 로컬 사본이 오프라인에서도 동작합니다. */
+@font-face{
+  font-family:'Pretendard Variable';
+  font-style:normal;
+  font-weight:100 900;
+  font-display:swap;
+  src:url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/woff2/PretendardVariable.woff2') format('woff2-variations'),
+      url('assets/fonts/PretendardVariable.woff2') format('woff2-variations');
+}
+</style>
+
+<!-- Hero pair is above the fold and must not pop in mid-transition -->
+<link rel="preload" as="image" href="assets/hero-scene-town.jpg" fetchpriority="high">
+<link rel="prefetch" as="image" href="assets/hero-scene-gallery.jpg">
+<link rel="prefetch" as="image" href="assets/hero-scene-campus.jpg">
+<link rel="preload" as="image" href="assets/world-vod.jpg">
+
+<script>document.documentElement.classList.add('js');</script>
+
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   SuperPlat — HOME
+   시안: PC 1920 / Mobile 375 (Figma) · Hero reveal: index-standalone_2_1.html
+   ───────────────────────────────────────────────────────────────────
+   구성
+     00 Reset / Tokens
+     01 Layout primitives
+     02 Header + Mobile drawer
+     03 Hero (dual-image activation + brush reveal)
+     04 Character marquee
+     05 World carousel
+     06 Cinematic scroll
+     07 Community cards
+     08 Final CTA + Footer
+     09 Reveal / reduced-motion
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── 00 Reset ──────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scrollbar-gutter:stable}
+body,h1,h2,h3,p,figure,ul,li{margin:0;padding:0}
+ul{list-style:none}
+/* ⚠️ height:auto 필수 — width/height 속성이 붙은 img 에 CSS width 만 주면
+   브라우저가 속성 height 를 그대로 써서 이미지가 눌립니다 (CTA 캐릭터 찌그러짐 원인) */
+img{display:block;max-width:100%;height:auto}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+:focus-visible{outline:2px solid #191F28;outline-offset:3px;border-radius:4px}
+.hero :focus-visible,.cta :focus-visible{outline-color:#fff}
+.br-m{display:none}
+@media (max-width:767px){.br-m{display:inline}}
+.sr{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* ── 00 Tokens ─────────────────────────────────────────────────── */
+:root{
+  /* color — 시안 실측 (title #191F28 = TDS grey900) */
+  /* ── 테마 채널 토큰 ────────────────────────────────────────────────
+     사이트 전체의 "잉크색 반투명"(테두리 · divider · 보조 텍스트 · 미세 배경)은
+     전부 rgba(var(--ink-rgb), α) 형태로만 씁니다. Dark 에서 이 채널 하나만
+     바꾸면 수백 개 규칙이 한 번에 따라옵니다. 알파(=계층)는 그대로 유지됩니다.
+     --line-rgb 는 border / outline 전용 채널입니다 (그림자·이미지 DIM 은 제외). */
+  --ink-rgb:23,26,33;
+  --line-rgb:0,0,0;
+
+  --ink:#191F28;
+  --ink-soft:#333B45;
+  /* ⚠️ Light 보조 텍스트 계단을 한 단계씩 올렸습니다.
+     실측: 예전 --body-2nd(.46) 는 흰 배경에서 2.97 : 1 로 WCAG AA(4.5)에
+     한참 못 미쳤고, 사이트 전체의 캡션 · 메타 · 도움말이 이 토큰을 씁니다.
+       .46 → 2.97   .64 → 5.22 ✔ (연회색 표면에서도 4.9 이상)
+       .62 → 4.88   .70 → 6.42 ✔
+       .68 → 5.83   .78 → 7.78 ✔
+     세 단계의 순서와 간격은 그대로 유지하면서 전부 AA 를 넘깁니다.
+     Dark 는 sp-theme.css 에서 이미 5.9 : 1 이상이라 건드리지 않았습니다. */
+  --body:rgba(var(--ink-rgb),.70);
+  --body-2nd:rgba(var(--ink-rgb),.64);
+  --body-2:rgba(var(--ink-rgb),.78);
+  --white:#fff;
+  --bg:#fff;
+  --bg-gray:#F5F5F6;   /* Section 03 */
+  --card:#F7F7F7;      /* Section 05 card default */
+  --card-left:#DAE6FF; /* Section 05 hover A */
+  --card-right:#FFE9C3;/* Section 05 hover B */
+  --band:#F2F3F6;      /* Final CTA band */
+  --line:rgba(var(--line-rgb),.07);
+  --accent:#FF7A18;    /* hero activation glow (원본 이미지의 orange) */
+
+  /* layout */
+  --gutter:clamp(20px, 4vw, 80px);
+  --container:min(1400px, 100% - 2 * var(--gutter));
+  --container-wide:min(1440px, 100% - 2 * var(--gutter));
+  --header-h:clamp(66px, calc(56px + 1.25vw), 80px);   /* 1920:80 · 1600:76 · 1440:74 · 1280:72 · 1024:68.8 · 768:66 */
+  --r-card:16px;
+  --r-media:20px;
+  /* 콘텐츠 카드 슬롯 공통 라운드 — World & IP 카드가 이 토큰 하나만 씁니다.
+     같은 카드 컴포넌트를 다른 페이지에서 재사용할 때도 이 값을 그대로 쓰면
+     카드마다 라운드가 달라지는 일이 생기지 않습니다. (PC 24 / 모바일 16) */
+  --radius-card:24px;
+
+  /* ══ SPACING TOKENS ══════════════════════════════════════════════
+     ⚠️ 섹션·블록 여백은 반드시 아래 토큰만 씁니다. 임의의 margin 금지.
+
+     token                @375  @1024  @1440  @1920  용도
+     space-section-sm      76     80     112    148   보조 섹션 (CTA 하단 등)
+     space-section-md      96     96     135    180   표준 섹션
+     space-section-lg     112    118    166    220   스토리텔링 섹션
+     space-section-xl     124    128    180    240   cinematic pause
+     space-content-sm      12     14     18      18   라벨 ↔ 값
+     space-content-md      20     22     30      36   제목 ↔ 본문
+     space-content-lg      36     40     56      72   텍스트 ↔ 비주얼          */
+  --space-section-sm:clamp(76px, 7.8vw, 148px);
+  --space-section-md:clamp(96px, 9.4vw, 180px);
+  --space-section-lg:clamp(112px, 11.5vw, 220px);
+  --space-section-xl:clamp(124px, 12.5vw, 240px);
+  --space-content-sm:clamp(12px, 1vw, 18px);
+  --space-content-md:clamp(20px, 2.1vw, 36px);
+  --space-content-lg:clamp(36px, 3.9vw, 72px);
+  /* 의미 기반 별칭 — 섹션에서는 이 이름을 씁니다 */
+  --space-title-to-body:var(--space-content-md);
+  --space-text-to-media:var(--space-content-lg);
+
+  /* ── motion tokens ──────────────────────────────────────────────
+     사이트 전체 애니메이션은 이 6개 값만 씁니다. 개별 하드코딩 금지.
+       fast     220~300  micro interaction (hover / press)
+       normal   450~650  UI 상태 전환
+       reveal   700~900  텍스트·카드 등장
+       cinematic 900~1200 큰 비주얼
+     motion hierarchy: headline > body > image > cards > buttons > 장식(정지) */
+  --ease:cubic-bezier(.16,1,.3,1);       /* primary */
+  --ease-soft:cubic-bezier(.22,1,.36,1); /* subtle  */
+
+  /* ── WORLD 배경 Semantic Color Family (Light) ──────────────────
+     공간 19곳에 색을 19개 만들지 않습니다. 6개 계열만 두고 공간을 거기에
+     연결합니다(WORLDS[].fam). 실제 HEX 는 오직 여기 + sp-theme.css 두 곳에만
+     있어서, 테마 전환은 CSS 가 알아서 처리합니다.
+     ⚠️ Light 도 파스텔/화이트가 아니라 "채도를 낮춘 아이덴티티 컬러"입니다. */
+  --world-rose:#A8757F;
+  --world-warm:#9F8378;
+  --world-blue:#7185A5;
+  --world-aqua:#769B9C;
+  --world-sage:#84977D;
+  --world-neutral:#707070;
+  --t-fast:260ms;
+  --t-normal:560ms;
+  --t-reveal:820ms;
+  --t-cine:1050ms;
+  --stagger:80ms;
+  --rv-y:28px;                            /* reveal 이동 거리 */
+  --t-micro:var(--t-fast);                /* 기존 사용처 호환 */
+  --t-ui:360ms;
+
+  /* ══ TYPOGRAPHY TOKENS ═══════════════════════════════════════════
+     Pretendard 하나로 운영하는 공통 스케일입니다.
+     ⚠️ 섹션에서 font-size 를 새로 만들지 말고 반드시 이 토큰을 재사용하세요.
+        (.t-* 유틸리티 클래스로도 그대로 쓸 수 있습니다)
+
+     token           @375  @1440  @1920   용도
+     display-xl       40     72     84    Hero
+     display-lg       34     54     64    영상 statement
+     heading-1        30     48     56    섹션 타이틀
+     heading-2        24     34     40    서브 섹션 / Final CTA
+     heading-3        20     24     28    카드·피처 타이틀
+     title            19     22     24    공간명
+     body-lg          16     18     20    섹션 본문
+     body-md          15     17     18    카드 본문
+     body-sm          13     14     15    보조 설명
+     caption          12     13     13    메타 / 카운터              */
+  --font-display-xl:clamp(40px, 5vw, 84px);
+  --font-display-lg:clamp(34px, calc(24px + 2.083vw), 64px);
+  --font-heading-1:clamp(33px, calc(24px + 1.667vw), 56px);   /* @375 33 · @1440 48 · @1920 56 */
+  --font-heading-2:clamp(28px, calc(17px + 1.2vw), 40px);
+  --font-heading-3:clamp(20px, calc(13.5px + .75vw), 28px);
+  --font-title:clamp(19px, calc(15.5px + .44vw), 24px);
+  --font-body-lg:clamp(16px, calc(12.6px + .385vw), 20px);
+  --font-body-md:clamp(15px, calc(12.9px + .265vw), 18px);
+  --font-body-sm:clamp(13px, calc(11.5px + .18vw), 15px);
+  --font-caption:clamp(12px, calc(11.3px + .09vw), 13px);
+  --font-nav:clamp(14px, .8vw, 15px);
+  --font-nav-2:clamp(13px, .74vw, 14px);
+  --font-btn:clamp(15px, .88vw, 17px);
+
+  /* 자간 — 한글 제목은 과하게 조이지 않습니다 */
+  --ls-display:-.04em;
+  --ls-heading:-.03em;
+  --ls-body:-.012em;
+
+  /* 기존 이름 호환 (내부 참조용) */
+  --fs-h1:var(--font-display-xl);
+  --fs-h2:var(--font-heading-1);
+  --fs-stmt:var(--font-display-lg);
+  --fs-feature:var(--font-heading-3);
+  --fs-desc:var(--font-body-lg);
+  --fs-body:var(--font-body-md);
+  --fs-lead:var(--font-body-lg);
+  --fs-nav:var(--font-nav);
+  --fs-label:var(--font-caption);
+}
+
+/* 모바일 — 같은 motion language 를 유지하되 이동 거리·간격만 가볍게 (§27) */
+@media (max-width:767px){
+  :root{--rv-y:20px;--stagger:60ms;--t-cine:900ms;--radius-card:16px}
+}
+
+/* 2K·4K — 콘텐츠가 우표처럼 작아 보이지 않도록 한 단계만 완만하게 올립니다.
+   (1400 기준은 유지, 상한만 1600. 이미지/타이포가 무한정 커지지는 않습니다) */
+@media (min-width:2200px){
+  :root{
+    /* 콘텐츠 폭은 1400 으로 고정하고, 남는 공간은 전부 여백으로 흘려보냅니다 */
+    --gutter:clamp(96px, 5vw, 260px);
+    --container:min(1400px, 100% - 2 * var(--gutter));
+    --container-wide:min(1440px, 100% - 2 * var(--gutter));
+    --cine-max:1600px;
+    --font-display-xl:clamp(84px, 2.6vw, 100px);
+    --font-display-lg:clamp(64px, 2vw, 76px);
+    --font-heading-1:clamp(56px, 1.75vw, 66px);
+    --font-heading-2:clamp(40px, 1.25vw, 48px);
+    --font-heading-3:clamp(28px, .88vw, 34px);
+    --font-title:clamp(24px, .75vw, 29px);
+    --font-body-lg:clamp(20px, .62vw, 24px);
+    --font-body-md:clamp(18px, .56vw, 21px);
+    --font-body-sm:clamp(15px, .47vw, 18px);
+    --font-caption:clamp(13px, .41vw, 16px);
+    --font-nav:clamp(15px, .47vw, 18px);
+    --font-nav-2:clamp(14px, .44vw, 17px);
+    --font-btn:clamp(17px, .53vw, 20px);
+    --header-h:80px;                       /* 2200+ 에서도 90px 을 넘기지 않습니다 */
+  }
+}
+
+body{
+  font-family:'Pretendard Variable','Pretendard',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,'Apple SD Gothic Neo',sans-serif;
+  font-size:var(--font-body-md);
+  line-height:1.65;
+  color:var(--ink);
+  background:var(--bg);
+  word-break:keep-all;
+  overflow-wrap:break-word;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  font-feature-settings:'tnum' 0;
+}
+body.is-locked{overflow:hidden;touch-action:none}
+/* 모바일 — 인접 섹션 합산 여백이 한 화면을 덮지 않도록 한 단계 압축 */
+@media (max-width:767px){
+  :root{
+    --space-section-sm:72px;
+    --space-section-md:92px;          /* 섹션 상단 88~104 */
+    --space-section-lg:96px;
+    --space-section-xl:108px;
+    --space-content-md:clamp(20px, 5.6vw, 24px);   /* 제목 → 본문 20~24 */
+    --space-content-lg:clamp(36px, 10.4vw, 44px);  /* 본문 → 비주얼 36~44 */
+  }
+}
+
+/* ── 01 Layout primitives ──────────────────────────────────────── */
+/* ── Typography utilities — 어디서든 이 클래스만으로 위계를 맞출 수 있습니다 ── */
+.t-display-xl{font-size:var(--font-display-xl);font-weight:700;line-height:1.12;letter-spacing:var(--ls-display)}
+.t-display-lg{font-size:var(--font-display-lg);font-weight:700;line-height:1.15;letter-spacing:-.035em}
+.t-heading-1{font-size:var(--font-heading-1);font-weight:700;line-height:1.15;letter-spacing:var(--ls-heading)}
+.t-heading-2{font-size:var(--font-heading-2);font-weight:700;line-height:1.2;letter-spacing:-.025em}
+.t-heading-3{font-size:var(--font-heading-3);font-weight:700;line-height:1.3;letter-spacing:-.02em}
+.t-title{font-size:var(--font-title);font-weight:700;line-height:1.35;letter-spacing:-.02em}
+.t-body-lg{font-size:var(--font-body-lg);font-weight:400;line-height:1.65;letter-spacing:var(--ls-body)}
+.t-body-md{font-size:var(--font-body-md);font-weight:400;line-height:1.65;letter-spacing:var(--ls-body)}
+.t-body-sm{font-size:var(--font-body-sm);font-weight:400;line-height:1.6;letter-spacing:-.008em}
+.t-caption{font-size:var(--font-caption);font-weight:500;line-height:1.5;letter-spacing:0}
+/* 숫자 UI — 폭이 흔들리지 않게 */
+.t-num{font-variant-numeric:tabular-nums;font-weight:500}
+
+.wrap{width:var(--container);margin-inline:auto}
+.wrap--wide{width:var(--container-wide);margin-inline:auto}
+
+.section-head{max-width:none}
+.section-title{
+  font-size:var(--font-heading-1);
+  line-height:1.15;
+  letter-spacing:var(--ls-heading);
+  font-weight:700;
+  color:var(--ink);
+}
+.section-desc{
+  margin-top:var(--space-title-to-body);   /* 제목 ↔ 본문 20 → 36px */
+  max-width:700px;                      /* 본문은 넓게 읽히되 700px 이내 */
+  font-size:var(--font-body-lg);
+  font-weight:400;
+  line-height:1.65;
+  color:var(--body);
+  letter-spacing:var(--ls-body);
+}
+.section-desc br{display:inline}
+@media (max-width:767px){
+  /* 제목은 시안대로 2줄 — 화면마다 줄바꿈이 달라지지 않게 폭을 잡아 둡니다 */
+  .section-title{line-height:1.18;max-width:15ch}
+}
+
+/* 섹션 세로 리듬 — 1920 시안 실측을 vw로 환산 */
+/* 섹션 세로 리듬 — 기계적으로 같은 값이 아니라 콘텐츠 무게에 따라 3단계 */
+.s-white{padding-block:var(--space-section-md) var(--space-section-lg)}   /* 캐릭터 */
+
+/* ── 캐릭터 섹션 전용 vertical rhythm ────────────────────────────
+   메인의 주요 Showcase 섹션이라 사이트에서 가장 여유 있는 spacing 그룹입니다.
+   (공통 토큰을 건드리면 다른 섹션까지 같이 움직여서 여기서만 덮어씁니다)
+
+   ⚠️ 아래 섹션(#cine)은 padding-top 이 0 인 full-bleed 이미지로 시작합니다.
+      그래서 위/아래를 같은 값으로 두면 rail 바로 밑에서 다음 장면이
+      시작되는 인상이 남습니다 — 하단을 한 단계 더 크게 잡습니다.
+
+     TOP     3840 276 · 1920 240 · 1600 220 · 1440 210 · 1280 200
+             1024 168 · 768 144 · 430 116 · 390 112 · 375 111 · 320 106
+     BOTTOM  3840 304 · 1920 264 · 1600 242 · 1440 231 · 1280 220
+             1024 184 · 768 160 · 430 128 · 390 124 · 375 123 · 320 118  */
+#about{                                                                    /* ≥1920 */
+  padding-top:clamp(240px, calc(204px + 1.875vw), 276px);
+  padding-bottom:clamp(264px, calc(224px + 2.083vw), 304px);
+}
+@media (max-width:1919px){ #about{
+  padding-top:clamp(200px, calc(120px + 6.25vw), 240px);
+  padding-bottom:clamp(220px, calc(132px + 6.875vw), 264px);
+} }
+@media (max-width:1279px){ #about{
+  padding-top:clamp(168px, 15.625vw, 200px);
+  padding-bottom:clamp(184px, 17.19vw, 220px);
+} }
+@media (max-width:1023px){ #about{
+  padding-top:clamp(144px, 16.4vw, 168px);
+  padding-bottom:clamp(160px, 17.98vw, 184px);
+} }
+@media (max-width:767px){  #about{
+  padding-top:clamp(96px, calc(79px + 8.5vw), 144px);
+  padding-bottom:clamp(110px, calc(87px + 9.55vw), 160px);
+} }
+/* 제목 ↔ 본문 — 하나의 text group 이라 너무 벌리지 않습니다.
+   margin 값은 32/30/26 이지만 두 텍스트의 line-height 여백이 서로 먹어서
+   실제로 보이는 글자 사이 간격은 약 25 / 26 / 22px 입니다(실측 기준 24~28). */
+#about .section-desc{margin-top:32px;max-width:680px}
+@media (max-width:1279px){ #about .section-desc{margin-top:30px} }
+@media (max-width:767px){  #about .section-desc{margin-top:26px;max-width:100%} }
+
+/* 본문 ↔ 캐릭터 rail — rail 이 hover safe padding 을 갖고 있어
+   그만큼 미리 당겨야 실제 체감 여백이 아래 숫자와 같아집니다.
+     Desktop 96 · 1280~1919 88 · 1024~1279 80 · Tablet 72 · Mobile 64  */
+#about .marquee{margin-top:calc(96px - var(--safe))}
+@media (max-width:1919px){ #about .marquee{margin-top:calc(88px - var(--safe))} }
+@media (max-width:1279px){ #about .marquee{margin-top:calc(80px - var(--safe))} }
+@media (max-width:1023px){ #about .marquee{margin-top:calc(72px - var(--safe))} }
+@media (max-width:767px){  #about .marquee{margin-top:calc(64px - var(--safe))} }
+
+/* 한 화면짜리 Showcase — 큰 제목 · 넓은 whitespace · 큰 캐릭터 rail 이
+   하나의 완성된 장면으로 읽히도록 최소 높이를 잡고 그룹을 세로 중앙에 둡니다.
+   padding 은 그대로 "최소 호흡"으로 남아서, 콘텐츠가 길어지면 섹션이 늘어납니다.
+   모바일·태블릿은 강제 높이 없이 여백 리듬만으로 같은 인상을 만듭니다. */
+@media (min-width:1024px){
+  #about{min-height:88svh;display:flex;flex-direction:column;justify-content:center}
+}
+@supports not (height:100svh){ @media (min-width:1024px){ #about{min-height:88vh} } }
+/* 진입 모션 — Title → Description(+120ms) → Character Rail(+280ms).
+   여백이 넓어진 만큼 세 덩어리가 한꺼번에 튀어나오지 않도록 간격을 벌렸습니다.
+   이동 거리(translateY)와 종류는 그대로 — opacity + translate 뿐이고
+   scale / bounce 는 쓰지 않습니다. (#about 안에서만 적용) */
+.js #about .section-head.is-in .section-desc{transition-delay:120ms, 120ms}
+.js #about .marquee.is-in .marquee__card{
+  transition-delay:calc(280ms + var(--i, 0) * 55ms),
+                   calc(280ms + var(--i, 0) * 55ms), 0s;
+}
+
+/* 2K·4K — 제목과 본문이 무한히 커지지 않게 상한만 둡니다 */
+@media (min-width:2200px){
+  #about .section-title{font-size:64px}
+  #about .section-desc{font-size:20px}
+}
+.s-gray{background:var(--bg-gray);padding-block:var(--space-section-md) var(--space-section-lg)} /* 공간 */
+/* 공간 섹션 바탕 — 선택된 공간의 Semantic Color 가 그대로 내려옵니다.
+   (.worlds__bg 가 inset:0 으로 덮지만, 로딩 전 한 프레임까지 같은 색으로 맞춥니다) */
+#worlds.s-gray{background:var(--world-bg, var(--world-rose))}
+/* ── 공간 섹션 vertical rhythm ───────────────────────────────────
+   Hero 바로 다음 섹션이 되면서 상단 호흡을 따로 잡습니다.
+   Hero 는 sticky 가 풀리며 흰 화면으로 끝나므로, 그 흰 화면과 사진 배경 사이에
+   충분한 여백을 두어 두 이미지가 하나로 붙어 보이지 않게 합니다.
+     Desktop 120~160 · Tablet 96~120 · Mobile 80~96
+   하단은 캐릭터 섹션이 자체 top padding(≈200)을 갖고 있어 과하지 않게 둡니다. */
+#worlds{padding-block:clamp(120px, 8.3vw, 160px) clamp(104px, 7.3vw, 140px)}
+@media (max-width:1023px){ #worlds{padding-block:clamp(96px, 11.7vw, 120px) clamp(88px, 10.5vw, 108px)} }
+@media (max-width:767px){  #worlds{padding-block:clamp(80px, 22vw, 96px) clamp(76px, 20vw, 88px)} }
+.s-cards{padding-block:var(--space-section-lg) var(--space-section-md)}   /* 커뮤니티 */
+/* 카드 아래 → 다음 섹션 : Desktop 180 (토큰 그대로) · Mobile 96~120 */
+@media (max-width:767px){ .s-cards{padding-bottom:clamp(96px, 26vw, 120px)} }
+
+/* ── 02 Header ─────────────────────────────────────────────────── */
+.header{
+  position:fixed;
+  inset:0 0 auto;
+  z-index:200;
+  /* SMART HEADER — 스크롤 방향에 따라 위로 접힙니다.
+     ⚠️ display / DOM 조작이 아니라 transform 만 씁니다. fixed 오버레이라
+        본문 레이아웃은 그대로여서 layout shift(CLS)가 생기지 않습니다. */
+  transform:translate3d(0,0,0);
+  will-change:transform;
+  transition:background-color var(--t-ui) var(--ease), box-shadow var(--t-ui) var(--ease),
+             backdrop-filter var(--t-ui) var(--ease), transform 320ms var(--ease);
+}
+html .header.is-hidden{transform:translate3d(0,-100%,0)}
+@media (prefers-reduced-motion:reduce){
+  .header{transition-duration:1ms, 1ms, 1ms, 1ms}
+}
+.header__inner{
+  /* ⚠️ 본문과 같은 1400 Grid — 헤더만 1440 을 쓰면 로고·CTA 가 본문보다 20px 씩
+     바깥으로 밀려 나갑니다(실측). 같은 축을 쓰도록 --container 로 맞췄습니다. */
+  width:var(--container);
+  margin-inline:auto;
+  height:var(--header-h);
+  /* 1fr · auto · 1fr — 좌우 칸이 같은 폭이라 메뉴가 컨테이너 정중앙에 놓입니다.
+     (로고 폭과 유틸리티 폭이 달라도 메뉴 축은 흔들리지 않습니다) */
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  align-items:center;
+  column-gap:clamp(20px,2vw,40px);
+}
+.header__logo{grid-column:1;justify-self:start;display:flex;align-items:center;min-height:44px}
+.header__logo img{
+  /* ⚠️ 높이가 아니라 폭 기준입니다.
+     원본 366×132 안에 좌우 15/12px, 상하 9px 의 투명 여백이 있어서
+     "보이는 로고 폭"은 지정 폭의 약 92.6% 입니다.
+     106px → 실제 시각 폭 98px (요청 90~104 구간). 비율은 건드리지 않습니다. */
+  width:clamp(99px, calc(83px + 2.083vw), 123px);
+  height:auto;
+  transition:filter var(--t-ui) var(--ease);
+}
+.header__nav{grid-column:2;justify-self:center;display:flex;align-items:center;gap:clamp(28px, calc(4px + 2.083vw), 44px)}   /* 1920:44 · 1600:37 · 1440:34 · 1280:30.7 · 1024:28 */
+.header__link{
+  position:relative;
+  font-size:clamp(14px, calc(12.5px + .156vw), 15.5px);  /* 1920:15.5 · 1440:14.8 · 1280:14.5 · 1024:14.1 */
+  font-weight:600;                                       /* SemiBold — 로고보다 한 단계 낮은 위계 */
+  letter-spacing:-.01em;
+  color:var(--white);
+  padding:6px 2px;
+  transition:opacity var(--t-micro) var(--ease), color var(--t-ui) var(--ease);
+}
+.header__link::after{
+  content:'';
+  position:absolute;
+  left:2px;right:2px;bottom:2px;
+  height:1px;
+  background:currentColor;
+  transform:scaleX(0);
+  transform-origin:left center;
+  transition:transform 220ms var(--ease);
+}
+.header__link:hover{opacity:.72}
+.header__link:hover::after{transform:scaleX(1)}
+
+/* ⚠️ 헤더 텍스트에는 그림자를 쓰지 않습니다 (요청).
+   사진 위 가독성은 Weight 600 · 흰색 · 스크롤 후 흰 배경 대비로만 확보합니다.
+   Hover / Active / Sticky / Smart Header 어느 상태에서도 그림자가 생기지 않도록
+   아래에서 명시적으로 none 을 못 박아 둡니다. */
+.header,.header *{text-shadow:none}
+.header__link,.header__link:hover,.header__link:active,.header__link:focus,
+.header__icon,.header__icon svg,.header__burger,.header__burger span,
+.header__langmenu button,.btn-download,.btn-download:hover,
+.header__login,.sp-av__btn{text-shadow:none;filter:none}
+/* 로고 이미지의 반전 필터는 그대로 둡니다 (그림자가 아니라 색 처리입니다) */
+.header.is-scrolled .header__logo img,.is-menu .header__logo img{filter:invert(1) brightness(.16)}
+
+.header__actions{grid-column:3;justify-self:end;display:flex;align-items:center;gap:clamp(12px,1.05vw,20px)}
+.header__icon{
+  width:42px;height:42px;              /* 히트 영역 — 아이콘은 작게, 누를 곳은 넉넉하게 */
+  display:grid;place-items:center;
+  border-radius:999px;
+  color:var(--white);
+  transition:background-color var(--t-micro) var(--ease), color var(--t-ui) var(--ease), opacity var(--t-micro) var(--ease);
+}
+.header__icon svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.6}
+/* ── Header utility icons — Bootstrap Icons(fill 기반) ────────────────
+   ⚠️ Bootstrap Icons 는 stroke 가 아니라 fill 로 그려집니다.
+      기존 stroke 규칙을 그대로 두면 아이콘이 보이지 않으므로 여기서 뒤집습니다.
+
+   Optical size — "박스 크기"가 아니라 "실제로 보이는 크기"를 맞춥니다.
+     globe2      path 가 16 뷰박스를 꽉 채움  → 보이는 크기 = 박스 크기
+     person-fill path bbox 가 12/16 = 75%    → 박스 × 0.75 가 보이는 크기
+   그래서 두 아이콘의 박스 크기를 일부러 다르게 줍니다.
+     Desktop  globe 18.5px      · person 24px(=18px 로 보임)
+     Mobile   globe 20px        · person 26.5px(=19.9px 로 보임)          */
+.header__icon .ic{stroke:none;fill:currentColor;display:block}
+.header__icon .ic--globe{width:18.5px;height:18.5px}
+.header__icon .ic--person{width:24px;height:24px}
+.header__icon:hover{background:rgba(255,255,255,.14)}
+.header__lang{position:relative}
+/* 언어 드롭다운 — 공통 Dropdown System(assets/sp-ui.js)의 surface / option 토큰을
+   그대로 씁니다. 헤더 메뉴와 페이지 안의 Select 메뉴가 같은 표면·같은 리듬을 갖도록.
+   토큰이 없는 환경(스크립트 미로딩)에서도 기존 값으로 떨어지게 fallback 을 둡니다. */
+.header__langmenu{
+  position:absolute;top:calc(100% + 8px);right:0;
+  min-width:118px;padding:var(--sp-menu-pad,7px);
+  background:var(--sp-menu-bg,#fff);border-radius:var(--sp-menu-r,14px);
+  box-shadow:var(--sp-menu-sh,0 10px 30px rgba(0,0,0,.08), 0 0 0 1px rgba(var(--ink-rgb),.05));
+  opacity:0;visibility:hidden;transform:translateY(-6px);
+  transition:opacity var(--sp-pop-out,160ms) var(--sp-ease,cubic-bezier(.16,1,.3,1)),
+             transform var(--sp-pop-out,160ms) var(--sp-ease,cubic-bezier(.16,1,.3,1)),
+             visibility var(--sp-pop-out,160ms);
+}
+.header__lang.is-open .header__langmenu{
+  opacity:1;visibility:visible;transform:none;
+  transition-duration:var(--sp-pop-in,220ms);
+}
+.header__langmenu button{
+  display:flex;align-items:center;width:100%;text-align:left;
+  min-height:var(--sp-opt-h,42px);
+  padding:0 12px;border-radius:var(--sp-opt-r,9px);
+  font-size:var(--font-nav-2);font-weight:500;color:var(--sp-ink,var(--ink));
+  transition:background-color var(--t-micro) var(--ease);
+}
+.header__langmenu button:hover{background:var(--sp-opt-hover,rgba(var(--ink-rgb),.045))}
+.header__langmenu button[aria-current='true']{font-weight:700;background:var(--sp-opt-sel,rgba(var(--ink-rgb),.06))}
+
+.btn-download{
+  display:inline-flex;align-items:center;justify-content:center;
+  height:clamp(38px, calc(32px + .52vw), 42px);   /* 1920:42 · 1440:39.5 · 1024:38 */
+  padding:0 clamp(16px,1.15vw,22px);
+  border-radius:999px;                            /* pill — height 42 기준 radius 21 */
+  background:var(--white);
+  color:var(--ink);
+  font-size:clamp(14px, calc(12.5px + .13vw), 15px);
+  font-weight:600;
+  letter-spacing:-.01em;
+  white-space:nowrap;
+  transition:background-color var(--t-ui) var(--ease), transform var(--t-micro) var(--ease), color var(--t-ui) var(--ease);
+}
+.btn-download:hover{transform:scale(1.015);background:#EFEFEF}
+.btn-download:active{transform:scale(.97)}
+
+/* Hero(사진) 위 — 시안처럼 아주 얇은 흰 divider 만.
+   배경은 깔지 않아 사진이 그대로 보입니다. */
+.header:not(.is-scrolled){box-shadow:0 1px 0 rgba(255,255,255,.14)}
+
+/* 스크롤 후 — 흰 배경 + blur + 다크 텍스트 */
+.header.is-scrolled{
+  background:rgba(255,255,255,.94);
+  -webkit-backdrop-filter:saturate(180%) blur(14px);
+  backdrop-filter:saturate(180%) blur(14px);
+  box-shadow:0 1px 0 rgba(0,0,0,.06);          /* 강한 회색 선 대신 아주 미세한 divider */
+}
+.header.is-scrolled .header__logo img{filter:invert(1) brightness(.16)}
+.header.is-scrolled .header__link,
+.header.is-scrolled .header__icon,
+.header.is-scrolled .header__burger{color:var(--ink)}
+.header.is-scrolled .header__icon:hover{background:rgba(0,0,0,.05)}
+.header.is-scrolled .btn-download{background:var(--ink);color:#fff}
+.header.is-scrolled .btn-download:hover{background:#333B45}
+
+/* 드로어가 열리면 헤더는 흰 배경 위에 놓입니다 — 로고·햄버거를 다크로 */
+.is-menu .header{background:transparent;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+.is-menu .header__logo img{filter:invert(1) brightness(.16)}
+.is-menu .header__link,
+.is-menu .header__icon,
+.is-menu .header__burger{color:var(--ink)}
+
+/* 햄버거 — 44×44 히트 영역, 실제 선은 24×1.75px / gap 6px */
+.header__burger{
+  display:none;
+  width:44px;height:44px;
+  margin-right:-10px;
+  /* ⚠️ grid + place-items 는 암시적 row 가 44px 안에서 stretch 되어
+     선 간격이 6px 이 아니라 16px 이 됩니다 → X 변환이 어긋납니다.
+     flex column + gap 으로 간격을 결정론적으로 고정합니다. */
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  color:var(--white);
+  border-radius:12px;
+  transition:background-color var(--t-micro) var(--ease), color var(--t-ui) var(--ease);
+}
+.header__burger:hover,
+.header__burger:active{background:rgba(255,255,255,.12)}
+.header.is-scrolled .header__burger:hover,
+.header.is-scrolled .header__burger:active,
+.is-menu .header__burger:hover,
+.is-menu .header__burger:active{background:rgba(0,0,0,.04)}
+.header__burger span{
+  display:block;width:24px;height:1.75px;border-radius:2px;background:currentColor;
+  transform-origin:center;
+  transition:transform 260ms var(--ease), opacity 180ms var(--ease);
+}
+/* 3줄 총높이 17.25px → 바깥 두 줄의 중심 이동량 7.75px */
+.is-menu .header__burger span:nth-child(1){transform:translateY(7.75px) rotate(45deg)}
+.is-menu .header__burger span:nth-child(2){opacity:0}
+.is-menu .header__burger span:nth-child(3){transform:translateY(-7.75px) rotate(-45deg)}
+
+/* 모바일 드로어 */
+.drawer{
+  position:fixed;inset:0;z-index:190;
+  background:#fff;
+  padding:calc(var(--header-h) + 24px) var(--gutter) calc(env(safe-area-inset-bottom) + 32px);
+  display:flex;flex-direction:column;
+  opacity:0;visibility:hidden;
+  transform:translateY(-14px);
+  transition:opacity 340ms var(--ease), transform 380ms var(--ease), visibility 380ms;
+}
+.is-menu .drawer{opacity:1;visibility:visible;transform:none}
+.drawer__nav{display:flex;flex-direction:column;gap:4px}
+.drawer__nav a{
+  font-size:clamp(24px,7vw,30px);
+  font-weight:700;
+  letter-spacing:-.035em;
+  color:var(--ink);
+  padding:12px 0;
+  opacity:0;transform:translateY(20px);
+}
+/* 배경 → 내비게이션 타이포 → 보조 액션 순으로 아주 짧은 stagger */
+.is-menu .drawer__nav a{opacity:1;transform:none;transition:opacity var(--t-normal) var(--ease),transform var(--t-normal) var(--ease)}
+.is-menu .drawer__nav a:nth-child(1){transition-delay:.10s}
+.is-menu .drawer__nav a:nth-child(2){transition-delay:.15s}
+.is-menu .drawer__nav a:nth-child(3){transition-delay:.20s}
+.is-menu .drawer__nav a:nth-child(4){transition-delay:.25s}
+.drawer__foot{margin-top:auto;padding-top:32px;border-top:1px solid var(--line)}
+.js .drawer__foot{opacity:0;transform:translateY(16px)}
+.js .is-menu .drawer__foot{
+  opacity:1;transform:none;
+  transition:opacity var(--t-normal) var(--ease) .30s, transform var(--t-normal) var(--ease) .30s;
+}
+.drawer__login{display:block;min-height:44px;line-height:44px;font-size:var(--font-nav-2);font-weight:500;color:var(--ink)}
+.drawer__cta{
+  display:flex;align-items:center;justify-content:center;
+  height:54px;margin-top:12px;border-radius:999px;
+  background:var(--ink);color:#fff;font-size:var(--font-btn);font-weight:600;
+  transition:transform var(--t-micro) var(--ease),background-color var(--t-ui) var(--ease);
+}
+.drawer__cta:active{transform:scale(.98)}
+
+@media (max-width:991px){
+  /* 좁아지면 메뉴를 억지로 줄이지 않고 햄버거로 전환합니다.
+     ⚠️ 프로필은 남깁니다 — 우측은 「프로필 + 햄버거」 두 개.
+        테마 · 언어 선택은 메뉴 안 「화면 설정」(.drawer__prefs)에서 제공합니다.
+        → assets/sp-nav.css */
+  .header__nav,.header__actions .header__lang,.header__actions .btn-download{display:none}
+  .header__burger{display:flex}
+  .header__actions{gap:2px}
+  /* 프로필 · 햄버거 두 개만 남는 구간 — 히트 영역을 44px 로 맞춰 둡니다 */
+  .header__icon{width:44px;height:44px}
+}
+
+/* ── 02b Mobile header refine ──────────────────────────────────────
+   구조(로고 좌 / 햄버거 우 / Hero 위 transparent → 스크롤 후 white glass)는
+   시안 그대로 두고 비율·정렬·전환만 다듬습니다.                        */
+@media (max-width:767px){
+  :root{--header-h:66px}
+  /* 노치·다이내믹 아일랜드 — 헤더 높이에 safe area 를 더합니다 */
+  .header{padding-top:env(safe-area-inset-top, 0px)}
+  .header__inner{
+    width:100%;
+    padding-inline:var(--gutter);   /* 375~500 구간에서 20px — 본문 좌우 여백과 정확히 동일 */
+    grid-template-columns:auto minmax(0,1fr);   /* 로고 좌 / 유틸리티 우 (메뉴는 드로어) */
+    column-gap:12px;
+  }
+  .header__actions{grid-column:2}
+  .header__logo{min-height:44px}
+  .header__logo img{
+    width:clamp(98px, 27vw, 108px);    /* 375 → 101px (보이는 폭 94px) · 430 → 108px (100px) */
+    height:auto;
+  }
+  .header__icon{width:44px;height:44px}
+  .header__icon svg{width:22px;height:22px}
+  .header__icon .ic--globe{width:20px;height:20px}
+  .header__icon .ic--person{width:26.5px;height:26.5px}
+  /* Hero 위에서는 divider 없음 — 스크롤 후에만 아주 얇게 */
+  .header.is-scrolled{
+    background:rgba(255,255,255,.88);
+    -webkit-backdrop-filter:saturate(180%) blur(16px);
+    backdrop-filter:saturate(180%) blur(16px);
+    box-shadow:0 1px 0 rgba(0,0,0,.06);
+  }
+  .header__burger{margin-right:-10px}
+  .drawer{padding-top:calc(env(safe-area-inset-top, 0px) + var(--header-h) + 20px)}
+  .drawer__nav{gap:8px}
+  .drawer__nav a{font-size:clamp(26px, 7.2vw, 30px);font-weight:700;line-height:1.3;padding:9px 0}
+  .drawer__cta{height:56px}
+}
+@media (max-width:359px){
+  :root{--header-h:62px}
+  .header__inner{padding-inline:18px}
+  .header__logo img{width:94px}
+  .drawer__nav a{font-size:23px}
+}
+
+@media (min-width:992px){
+  .drawer{display:none}
+}
+
+/* ── 03 Hero — ONE STICKY HERO + SCROLL PROGRESS ───────────────────
+   섹션을 여러 개로 쪼개지 않습니다. 스크롤 길이를 만드는 .shero__track 안에
+   .shero__stage 가 sticky 로 붙어 있고, progress(0~1) 하나가 아래를 전부 보간합니다.
+
+     .shero__frame   width / height / border-radius   (full bleed → 360 rounded square)
+     .shero__img     3장 crossfade (같은 frame 안에서 visual 만 교체)
+     .shero__lead    Scene 01 카피 exit
+     .shero__row     좌우 카피 entrance / swap
+
+   모든 값이 progress 의 순수 함수라, 위로 되감으면 그대로 역재생됩니다.
+   (일회성 IntersectionObserver 를 쓰지 않는 이유)                       */
+.shero{
+  position:relative;
+  background:#fff;
+  /* 카드 최종 크기 · 최종 radius — JS 가 이 값을 읽어 보간합니다 */
+  --card:360px;
+  --cardr:72px;
+  --shero-len:420svh;
+}
+@media (max-width:1279px){ .shero{--card:300px} }
+@media (max-width:1023px){ .shero{--card:min(calc(100vw - 96px), 380px);--cardr:64px;--shero-len:380svh} }
+/* ⚠️ 100vw 가 아니라 100%(스테이지 폭) 기준입니다 — 스크롤바 유무와 상관없이
+   카드가 항상 좌우 20px 콘텐츠 그리드에 정확히 맞습니다. (실기기 375 → 335) */
+@media (max-width:767px){  .shero{--card:min(calc(100% - 40px), 360px);--cardr:28px;--shero-len:340svh} }
+
+.shero__track{position:relative;height:var(--shero-len)}
+.shero__stage{
+  position:sticky;top:0;
+  height:100svh;min-height:520px;
+  overflow:hidden;
+  background:#fff;
+  isolation:isolate;
+}
+/* svh 미지원 브라우저 fallback */
+@supports not (height:100svh){
+  .shero{--shero-len:420vh}
+  @media (max-width:1023px){ .shero{--shero-len:380vh} }
+  @media (max-width:767px){  .shero{--shero-len:340vh} }
+  .shero__stage{height:100vh}
+}
+
+/* ⚠️ 이 하나의 박스가 full bleed → 360 정사각으로 "변형"됩니다.
+   transform:scale 만 쓰면 이미지 내부 crop 이 같이 눌려 버리므로
+   container dimensions 를 직접 보간하고, crop 은 object-fit:cover 가 맡습니다.
+   overflow:hidden 이 여기(실제 image wrapper)에 걸려 있어야
+   radius 가 단 한 프레임도 튀지 않습니다. */
+.shero__frame{
+  position:absolute;left:50%;top:50%;
+  width:var(--fw, 100%);height:var(--fh, 100%);
+  transform:translate3d(-50%,-50%,0);
+  border-radius:var(--fr, 0px);
+  overflow:hidden;
+  background:#0E1116;                     /* 이미지 로드 전 흰 플래시 방지 */
+  z-index:2;
+  /* width/height 는 합성 가능한 속성이 아니라 will-change 를 걸면 오히려 손해입니다.
+     대신 containment 로 매 프레임 레이아웃 범위를 이 박스 안으로 가둡니다. */
+  contain:layout paint;
+}
+.shero__imgs{position:absolute;inset:0}
+.shero__img{
+  position:absolute;inset:0;
+  width:100%;height:100%;
+  object-fit:cover;
+  object-position:var(--op, 50% 50%);
+  opacity:0;
+  transform:scale(var(--is,1));
+  will-change:opacity;
+}
+/* Scene 01 원본은 가로가 넓어, 화면이 좁아질수록 인물 쪽으로 살짝만 당깁니다.
+   ⚠️ 이미지 파일은 손대지 않고 object-position 으로만 조정합니다. */
+@media (max-width:1023px){ .shero__img[data-scene='0']{--op:52% 48%} }
+@media (max-width:767px){  .shero__img[data-scene='0']{--op:54% 46%} }
+
+/* Full bleed 상태에서만 필요한 텍스트 가독 gradient — 카드로 줄어들면 사라집니다 */
+.shero__scrim{
+  position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,
+    rgba(0,0,0,.34) 0%, rgba(0,0,0,.10) 30%,
+    rgba(0,0,0,.08) 58%, rgba(0,0,0,.30) 100%);
+  opacity:var(--scrim, 1);
+}
+
+/* Scene 01 카피 — Hero 전체에서 가장 강한 Typography.
+   임의의 값을 쓰지 않고 기존 --font-display-xl 토큰을 그대로 씁니다.
+   @1920 84 · @1600 80 · @1440 72 · @1280 64 · @1024 51 · @375 40 */
+.shero__lead{
+  position:absolute;left:50%;top:50%;z-index:3;
+  transform:translate3d(-50%, calc(-50% + var(--ly, 0px)), 0);
+  width:min(94vw, 1240px);
+  text-align:center;
+  color:#fff;
+  font-size:var(--font-display-xl);
+  font-weight:700;line-height:1.12;letter-spacing:var(--ls-display);
+  text-shadow:0 2px 24px rgba(0,0,0,.26);
+  opacity:var(--lo, 1);
+  filter:blur(var(--lb, 0px));
+  pointer-events:none;
+  will-change:opacity,transform;
+}
+/* 태블릿 구간만 토큰이 40px 까지 떨어져서 한 단계 올립니다 (48~56) */
+@media (min-width:768px) and (max-width:1023px){
+  .shero__lead{font-size:clamp(48px, 6.4vw, 56px)}
+}
+/* 모바일 — 토큰 하한(40px)에서 더 자라도록 한 단계 얹습니다.
+   @375 40 · @390 41 · @430 45. 좌우 스토리 카피(최대 36)보다 항상 큽니다. */
+@media (max-width:767px){
+  .shero__lead{font-size:clamp(40px, 10.4vw, 46px);line-height:1.15;letter-spacing:-.035em}
+}
+/* ⚠️ 각 줄은 overflow:hidden 마스크입니다 — 아래에서 위로 올라오며 reveal 됩니다.
+   descender 가 잘리지 않게 padding 만큼 아래로 넓히고 margin 으로 되돌립니다. */
+.shero__lead .line{display:block;overflow:hidden;padding-bottom:.1em;margin-bottom:-.1em}
+.shero__lead .line > span{display:block}
+
+/* 좌우 카피 — 카드와 같은 중심에 겹쳐 놓고 3열 grid 로 자리만 잡습니다.
+   가운데 열의 폭이 카드 폭과 같아서 텍스트가 카드를 침범하지 않습니다. */
+.shero__copy{position:absolute;inset:0;z-index:4;pointer-events:none}
+.shero__row{
+  position:absolute;left:50%;top:50%;
+  transform:translate(-50%,-50%);
+  /* 사이트 공통 1400 Content Grid 를 그대로 씁니다 —
+     1920 에서 좌측 기준선이 다른 섹션(.wrap)과 정확히 같은 x 에 놓입니다. */
+  width:var(--container);
+  display:grid;
+  /* ⚠️ grid track 에 %가 들어간 --card 를 그대로 쓰면 세로 기준으로 해석돼 무너집니다.
+     JS 가 probe 로 잰 실제 픽셀값(--cardpx)을 씁니다. */
+  grid-template-columns:minmax(0,1fr) var(--cardpx, 360px) minmax(0,1fr);
+  align-items:center;                       /* 좌 · 중앙 · 우 의 visual center 가 한 축 */
+  column-gap:clamp(24px, 3.2vw, 62px);
+}
+@media (max-width:1279px){ .shero__row{padding-inline:clamp(0px, 2.4vw, 30px)} }
+.shero__side{
+  /* 문장 자체가 주요 비주얼이 되도록 한 단계 키웠습니다.
+     1920 64 · 1600 56 · 1440 52 · 1280 48 · 1024 38 (2K 이상 68 상한)
+     ⚠️ 첫 화면 Headline(84 @1920)보다는 항상 작습니다 — hierarchy 역전 방지 */
+  font-size:clamp(46px, calc(16px + 2.5vw), 68px);
+  font-weight:700;line-height:1.12;letter-spacing:-.042em;
+  color:var(--ink);
+  word-break:keep-all;            /* 어절 단위로만 줄바꿈 */
+  opacity:0;
+  transform:translate3d(var(--sx, 0px), var(--sy, 0px), 0);
+  will-change:opacity,transform;
+}
+/* 첫 페인트 전 깜빡임 방지 — 어절은 마스크 아래에서 시작합니다 */
+.js .shero__copy .shero__side .w > i{opacity:0;transform:translate3d(0,32px,0)}
+/* 1024~1279 — 1400 그리드 안에서 카드와 문장이 서로 밀지 않도록 한 단계 낮춥니다 */
+@media (max-width:1279px){ .shero__side{font-size:clamp(34px, calc(2px + 3.1vw), 46px)} }
+/* ⚠️ 가운데 열은 카드 자리(빈 칸)입니다. 자동 배치에 맡기면 두 문장이
+   1·2열로 들어가 카드를 침범하므로 열을 명시합니다. */
+.shero__side--l{grid-column:1;justify-self:start;text-align:left}
+.shero__side--r{grid-column:3;justify-self:end;text-align:right}
+/* 어절 단위 마스크 — [나만의] [공간이] 가 아주 짧은 간격을 두고 차례로 올라옵니다.
+   글자 단위로 쪼개지 않습니다(한글에서 과하게 보입니다). */
+.shero__side .w{display:inline-block;overflow:hidden;vertical-align:top;padding-bottom:.14em;margin-bottom:-.14em}
+.shero__side .w > i{display:inline-block;font-style:normal;will-change:transform,opacity}
+
+/* Tablet 이하 — PC 3열을 억지로 줄이지 않고 "문장 사이에 이미지" 구조로 쌓습니다.
+   가운데 행이 카드 자리(빈 칸)라 카드가 정확히 두 문장 사이에 놓입니다. */
+@media (max-width:1023px){
+  .shero__row{
+    width:min(100% - 48px, 560px);
+    padding-inline:0;
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:auto var(--cardpx, 320px) auto;
+    row-gap:clamp(22px, 3.4vw, 34px);
+    justify-items:center;text-align:center;
+  }
+  .shero__side--l{grid-column:1;grid-row:1;justify-self:center;text-align:center}
+  .shero__side--r{grid-column:1;grid-row:3;justify-self:center;text-align:center}
+  .shero__side{font-size:clamp(28px, 4.2vw, 40px)}
+}
+@media (max-width:767px){
+  /* 텍스트 → 이미지 → 텍스트가 하나의 vertical composition 으로 읽히도록
+     margin 이 아니라 grid 의 row-gap 하나로 위·아래 간격을 동시에 잡습니다.
+     @375 36px · @430 40 · @320 31 — 위아래가 언제나 정확히 같습니다. */
+  .shero__row{width:min(100% - 40px, 460px);row-gap:clamp(30px, 9.6vw, 40px)}
+  .shero__side{font-size:clamp(30px, 9.9vw, 40px);line-height:1.18;letter-spacing:-.04em}
+}
+
+/* --card 실측용 — 화면에 아무것도 그리지 않습니다 */
+.shero__probe{position:absolute;left:0;top:0;width:var(--card);height:0;visibility:hidden;pointer-events:none}
+
+/* Scroll Indicator — 첨부 리소스(84×42 흰색 chevron)를 원본 비율 그대로 씁니다.
+   시선을 빼앗지 않는 보조 요소이므로 작게 유지합니다.
+   @1920 28 · @1600 26.5 · @1440 25.8 · @1280 25 · @1024 23.8 · @768 22.6 · @375 21
+   터치 타깃만 이미지보다 넉넉하게(48×44) 잡습니다. */
+.shero__cue{
+  position:absolute;z-index:5;left:50%;
+  bottom:calc(clamp(28px, 2vw, 36px) + env(safe-area-inset-bottom, 0px));
+  transform:translateX(-50%);
+  min-width:48px;min-height:44px;
+  display:grid;place-items:center;
+  opacity:var(--cue, 1);
+}
+.shero__cue img{
+  width:clamp(21px, calc(19px + .47vw), 28px);
+  height:auto;                          /* 원본 84:42 비율 유지 */
+  display:block;
+  filter:drop-shadow(0 2px 8px rgba(0,0,0,.18));   /* 밝은 화면에서도 사라지지 않게 */
+  animation:cue 2s var(--ease-soft) infinite;
+}
+/* 아래 방향을 조용히 안내하는 정도 — bounce / scale / glow 없음 */
+@keyframes cue{
+  0%,100%{transform:translateY(0);opacity:1}
+  50%    {transform:translateY(4px);opacity:.65}
+}
+@media (max-width:767px){
+  .shero__cue{bottom:calc(26px + env(safe-area-inset-bottom, 0px))}
+}
+.shero :focus-visible{outline-color:#fff}
+
+/* prefers-reduced-motion — sticky scrub 을 걷어내고 정적인 시퀀스로 내려앉습니다.
+   콘텐츠는 하나도 사라지지 않습니다. (JS 가 .is-static 을 붙입니다) */
+.shero.is-static{--shero-len:auto}
+.shero.is-static .shero__track{height:auto}
+.shero.is-static .shero__stage{position:static;height:100svh}
+.shero.is-static .shero__frame{
+  --fw:100%;--fh:100%;--fr:0px;
+  width:100%;height:100%;will-change:auto;
+}
+.shero.is-static .shero__img[data-scene='0']{opacity:1}
+.shero.is-static .shero__copy{display:none}
+.shero__static{display:none}
+.shero.is-static .shero__static{
+  display:block;
+  padding-block:clamp(72px,7vw,120px);
+}
+.shero.is-static .shero__static .shero__row{
+  position:static;transform:none;margin-inline:auto;
+  grid-template-rows:auto;
+}
+.shero.is-static .shero__static .shero__row + .shero__row{margin-top:clamp(64px,6vw,110px)}
+.shero.is-static .shero__side{opacity:1;transform:none}
+.shero.is-static .shero__side .w > i{opacity:1;transform:none}
+.shero__scard{
+  grid-column:2;
+  width:var(--cardpx, var(--card));height:var(--cardpx, var(--card));
+  border-radius:var(--cardr);
+  overflow:hidden;background:#0E1116;
+  justify-self:center;
+}
+@media (max-width:1023px){ .shero.is-static .shero__scard{grid-column:1;grid-row:2} }
+.shero__scard img{width:100%;height:100%;object-fit:cover;display:block}
+
+/* ══ 04 Character rail — flat horizontal marquee ═══════════════════
+   3D coverflow 를 걷어내고 평면 가로 rail 로 되돌렸습니다.
+   구조는 hover clipping 을 막기 위해 두 겹으로 유지합니다.
+     .marquee        overflow-x:clip / overflow-y:visible — 가로만 잘라 페이지 overflow 방지
+     .marquee__frame overflow:visible + 세로 safe padding — hover 확대가 잘리지 않는 영역
+     .marquee__card  1:1 정사각 + radius + overflow:hidden (hover scale 담당)
+   ═════════════════════════════════════════════════════════════════ */
+.marquee{
+  /* 본문 → rail. safe padding 만큼 미리 당겨 두어 실제 체감 여백이 토큰과 같아집니다 */
+  margin-top:calc(var(--space-text-to-media) - var(--safe));
+  --fade:clamp(80px, 5.2vw, 110px);      /* Desktop 80~110 — 예전 190 은 카드를 너무 먹었습니다 */
+  --safe:clamp(24px, 2.6vw, 44px);        /* hover 확대·그림자용 여유 — 섹션 여백과 분리 */
+  width:100%;
+  overflow-x:clip;                        /* ⚠️ hidden 이 아니라 clip — 세로는 visible 유지 */
+  overflow-y:visible;
+  --mq-mask:linear-gradient(90deg,
+    rgba(0,0,0,0)   0,
+    rgba(0,0,0,.2)  calc(var(--fade) * .42),
+    rgba(0,0,0,.8)  calc(var(--fade) * .78),
+    #000            var(--fade),
+    #000            calc(100% - var(--fade)),
+    rgba(0,0,0,.8)  calc(100% - var(--fade) * .78),
+    rgba(0,0,0,.2)  calc(100% - var(--fade) * .42),
+    rgba(0,0,0,0)   100%);
+  -webkit-mask-image:var(--mq-mask);
+          mask-image:var(--mq-mask);
+}
+@supports not (overflow-x: clip){ .marquee{overflow:hidden} }
+/* rail 의 hover safe padding 이 섹션 여백에 이중으로 더해지지 않게 상쇄 */
+.marquee{margin-bottom:calc(var(--safe) * -1)}
+@media (max-width:767px){
+  .marquee{--fade:clamp(32px, 11vw, 56px);--safe:20px}   /* Mobile 32~56 */
+  .marquee__track{gap:clamp(12px,3.5vw,16px)}
+}
+
+.marquee__frame{
+  position:relative;
+  overflow:visible;
+  padding-block:var(--safe);
+}
+.marquee__track{
+  display:flex;
+  align-items:center;
+  /* 카드가 각각 독립된 visual 로 보이되 하나의 rail 로 이어지게
+     Desktop 20~28 · Tablet 16~22 · Mobile 12~16 */
+  gap:clamp(16px,1.4vw,28px);
+  width:max-content;
+  will-change:transform;
+}
+/* ⚠️ 캐릭터 PNG 는 라운드 모서리와 배경이 이미 구워져 있습니다.
+   따라서 카드에 overflow:hidden / border-radius / background 를 걸지 않습니다.
+   (클리핑이 아예 없으므로 hover 확대로 잘릴 일도 없습니다) */
+.marquee__card{
+  position:relative;
+  flex:none;                     /* flex-shrink:0 */
+  /* ⚠️ 공통 wrapper 가 클리핑을 담당합니다.
+     원본 PNG 대부분은 모서리 라운드가 구워져 있지만(코너 alpha=0), 일부는
+     불투명해서(char-crowd · char-band) 그대로 두면 직각으로 보였습니다.
+     이미지마다 다르게 처리하지 않고 wrapper 한 곳에서 통일합니다.
+     화면상 곡률은 원본 baked radius(21px @415~604px ≈ 11px)와 같게 맞췄습니다. */
+  border-radius:clamp(9px,.78vw,12px);
+  overflow:hidden;
+  transform-origin:center center;
+  /* 부드럽게 커지는 hover — scale 하나뿐입니다.
+     custom cursor · 손 아이콘 · floating UI · tooltip · glow · particle 없음. */
+  transition:transform 420ms var(--ease-soft);   /* cubic-bezier(.22,1,.36,1) */
+  will-change:transform;
+}
+.marquee__card img{
+  display:block;
+  width:100%;height:100%;
+  object-fit:cover;              /* stretch 없음 — 카드 비율이 원본과 같으면 잘림도 없음 */
+  object-position:center;
+}
+/* 원본 비율별 높이 — 1920 기준 폭: portrait 240 / square 274 / landscape 345 */
+.marquee__card[data-ratio='portrait']{height:clamp(280px,22.2vw,350px);aspect-ratio:415/604}
+.marquee__card[data-ratio='square']{height:clamp(222px,17.5vw,274px);aspect-ratio:1}
+.marquee__card[data-ratio='landscape']{height:clamp(172px,13.6vw,214px);aspect-ratio:604/375}
+.marquee__card[data-ratio='wide']{height:clamp(190px,15vw,236px);aspect-ratio:335/232}
+/* 2K·4K — 카드가 무한히 커지지 않도록 상한만 한 단계 올립니다 */
+@media (min-width:2200px){
+  .marquee__card[data-ratio='portrait']{height:clamp(350px,11.9vw,383px)}
+  .marquee__card[data-ratio='square']{height:clamp(274px,9.3vw,300px)}
+  .marquee__card[data-ratio='landscape']{height:clamp(214px,7.3vw,234px)}
+  .marquee__card[data-ratio='wide']{height:clamp(236px,8.1vw,258px)}
+}
+@media (max-width:767px){
+  .marquee__card[data-ratio='portrait']{height:clamp(236px,66vw,280px)}
+  .marquee__card[data-ratio='square']{height:clamp(186px,52vw,222px)}
+  .marquee__card[data-ratio='landscape']{height:clamp(146px,40vw,172px)}
+  .marquee__card[data-ratio='wide']{height:clamp(162px,44vw,190px)}
+}
+@media (hover:hover){
+  /* 그림자 없이 스케일만 — 캐릭터 PNG 가 그대로 살아 있게 */
+  .marquee__card:hover{
+    transform:scale(1.02);
+    z-index:2;
+  }
+}
+@media (hover:none){
+  .marquee__card:active{transform:scale(1.015)}
+}
+
+/* 진입 — rail 전체가 하나의 레이어처럼, 앞쪽 카드만 짧은 stagger */
+.js .marquee__card{opacity:0;translate:0 26px}
+.js .marquee.is-in .marquee__card{
+  opacity:1;translate:0 0;
+  transition:opacity var(--t-reveal) var(--ease), translate var(--t-reveal) var(--ease),
+             transform 680ms var(--ease-soft);
+  transition-delay:calc(var(--stagger) * 2.4 + var(--i, 0) * 60ms),
+                   calc(var(--stagger) * 2.4 + var(--i, 0) * 60ms), 0s;
+}
+
+/* ── 05 World carousel ─────────────────────────────────────────── */
+/* 배경 ambient — 섹션 layout 에는 전혀 관여하지 않는 절대 배치 레이어입니다.
+   (배경이 바뀌어도 섹션 높이·위치·카드 위치가 움직이지 않습니다) */
+#worlds{position:relative;isolation:isolate}
+#worlds > .wrap,
+#worlds > .worlds{position:relative;z-index:1}
+/* ⓪ Semantic Base — 선택된 공간이 속한 색 계열 한 겹.
+   확대한 공간 사진을 배경으로 깔던 레이어를 걷어냈습니다.
+   HEX 는 --world-<family> 토큰에만 있고 여기서는 참조만 하므로,
+   테마를 바꾸면 이 레이어가 알아서 따라옵니다(JS 개입 없음 = active index 보존). */
+.worlds__bg{
+  position:absolute;inset:0;z-index:0;
+  overflow:hidden;
+  pointer-events:none;
+  contain:paint;
+  background-color:var(--world-bg, var(--world-rose));
+  transition:background-color 700ms var(--ease-soft);
+}
+/* ① 전역 dark wash — 색을 지우지 않을 만큼만 (흰 타이포 가독성 확보) */
+.worlds__wash{
+  position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:rgba(0,0,0,var(--wov, .26));
+  transition:background-color 700ms var(--ease-soft);
+}
+/* ② Gradient · Dim · Vignette — 단색 Flat 으로 보이지 않게 하는 레이어입니다.
+   (a) 가운데 위쪽의 아주 옅은 광원  (b) 아래쪽 vignette  (c) 상·하 국소 scrim
+   ⚠️ 이 세 겹이 없으면 배경이 그냥 한 덩어리 색으로 읽힙니다. 지우지 마세요. */
+.worlds__scrim{
+  position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(118% 74% at 50% 34%,
+      rgba(255,255,255,.13) 0%, rgba(255,255,255,.05) 34%, rgba(255,255,255,0) 62%),
+    radial-gradient(104% 58% at 50% 106%,
+      rgba(0,0,0,.30) 0%, rgba(0,0,0,.12) 42%, rgba(0,0,0,0) 72%),
+    linear-gradient(180deg,
+      rgba(0,0,0,.35) 0%,
+      rgba(0,0,0,.26) 26%,
+      rgba(0,0,0,.06) 50%,
+      rgba(0,0,0,.05) 64%,
+      rgba(0,0,0,.22) 84%,
+      rgba(0,0,0,.33) 100%);
+}
+/* ③ 상단·하단 white fade 는 두지 않습니다. 앞뒤 섹션과의 구분은
+   충분한 spacing · 배경 대비 · 타이포그래피가 담당합니다. */
+@media (max-width:767px){
+  /* 모바일 — 화면이 작아 텍스트 보호를 한 단계 강하게.
+     ⚠️ HEX 를 모바일 전용으로 따로 만들지 않고 dim / gradient 만 조정합니다. */
+  /* .30 이면 AQUA(가장 밝은 계열)에서 section-desc 가 4.47:1 로 아슬아슬하게
+     기준(4.5)에 못 미쳤습니다. HEX 는 그대로 두고 dim 만 한 단계 올립니다. */
+  .worlds__wash{background:rgba(0,0,0,var(--wov, .34))}
+  .worlds__scrim{
+    background:
+      radial-gradient(130% 62% at 50% 32%,
+        rgba(255,255,255,.11) 0%, rgba(255,255,255,.04) 36%, rgba(255,255,255,0) 64%),
+      radial-gradient(120% 52% at 50% 106%,
+        rgba(0,0,0,.30) 0%, rgba(0,0,0,.12) 44%, rgba(0,0,0,0) 74%),
+      linear-gradient(180deg,
+        rgba(0,0,0,.38) 0%,
+        rgba(0,0,0,.26) 18%,
+        rgba(0,0,0,.08) 42%,
+        rgba(0,0,0,.08) 58%,
+        rgba(0,0,0,.27) 82%,
+        rgba(0,0,0,.36) 100%);
+  }
+}
+/* prefers-reduced-motion 은 이 파일 아래쪽 전역 리셋(*{transition-duration:.001ms!important})이
+   담당합니다 — 배경색이 즉시 바뀌고, 애초에 scale/parallax 움직임은 없습니다.
+   ⚠️ 여기서 따로 규칙을 두면 전역 !important 에 막혀 죽은 코드가 됩니다. */
+
+/* ── 사진 위 화이트 타이포 ──────────────────────────────────────
+   이 섹션 안에서만 텍스트를 흰 계열로 바꿉니다. */
+#worlds .section-title{color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.16)}
+#worlds .section-desc{color:rgba(255,255,255,.84);text-shadow:0 2px 10px rgba(0,0,0,.14)}
+#worlds .worlds__name{color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.18)}
+#worlds .worlds__desc{color:rgba(255,255,255,.78);text-shadow:0 2px 10px rgba(0,0,0,.16)}
+#worlds .worlds__counter{color:rgba(255,255,255,.78)}
+#worlds .worlds__bar{background:rgba(255,255,255,.26)}
+#worlds .worlds__bar i{background:#fff}
+/* 화살표 — 원본 PNG 는 그대로 두고 CSS 로만 흰색 처리 */
+#worlds .arrow img{filter:brightness(0) invert(1);opacity:.82}
+@media (hover:hover){ #worlds .arrow:hover img{opacity:1} }
+#worlds .arrow:focus-visible{outline:2px solid rgba(255,255,255,.9);outline-offset:2px;border-radius:999px}
+/* ⚠️ 선택 상태를 테두리로 표시하지 않습니다.
+   Active 는 「가운데 배치 + 가장 큰 이미지 + DIM 단계 + 배경 동기화」로만 읽힙니다.
+
+   ⚠️ 흰 선의 진짜 원인은 카드가 아니라 캐러셀 컨테이너였습니다.
+      .worlds__stage 에 tabindex="0" 이 있어서, 클릭하거나 방향키를 쓰면
+      브라우저 기본 focus ring 이 캐러셀 전체에 그려집니다
+      (실측: outline 2px solid, offset 3px / macOS·Safari 에서는 밝은 흰색).
+      아래에서 그 기본 ring 을 끄고, 키보드 전용 표시를 따로 제공합니다. */
+#worlds .slide,
+#worlds .slide__inner,
+#worlds .slide__inner img,
+#worlds .worlds__viewport,
+#worlds .worlds__stage{border:0;box-shadow:none}
+/* 마우스로 만졌을 때 남는 모든 상태 — 어디에도 ring 이 생기지 않습니다 */
+#worlds .worlds__stage:focus,
+#worlds .worlds__stage:focus-within,
+#worlds .worlds__viewport:focus,
+#worlds .slide:focus,
+#worlds .slide:focus-within,
+#worlds .slide:active,
+#worlds .slide:hover,
+#worlds .slide.is-active,
+#worlds .slide.is-active .slide__inner,
+#worlds .slide.is-active .slide__inner img,
+#worlds .slide[aria-selected],
+#worlds .slide[data-active],
+#worlds .slide__inner:focus,
+#worlds .slide__inner:focus-visible,
+#worlds .slide__inner img:focus{outline:none;box-shadow:none;border:0}
+/* 의사요소로도 테두리가 그려지지 않게 못 박아 둡니다 */
+#worlds .slide::before,#worlds .slide::after,
+#worlds .slide__inner::before,#worlds .slide__inner::after{content:none}
+/* 키보드 전용 표시 — 카드 테두리처럼 보이지 않게 캐러셀 바깥으로 충분히 띄웁니다.
+   ⚠️ :focus-visible 만으로는 부족합니다 — 한 번 키보드로 포커스가 잡히면 그 뒤
+      마우스로 클릭해도 브라우저가 focus-visible 을 유지합니다(실측 확인).
+      그래서 포인터로 만지는 순간 .is-pointer 를 붙여 확실히 끕니다. */
+#worlds .worlds__stage:focus-visible{
+  outline:2px solid rgba(255,255,255,.62);
+  outline-offset:10px;
+  border-radius:20px;
+}
+#worlds .worlds__stage.is-pointer:focus-visible{outline:none}
+/* 좌우 프리뷰에 걸려 있던 어두운 덮개는 제거했습니다 —
+   두 번째 / 세 번째 카드도 중앙 카드와 같은 밝기로 보입니다.
+   배경과의 분리는 위의 1px inset 선이 담당합니다. */
+@media (max-width:767px){
+  #worlds .section-desc{color:rgba(255,255,255,.82)}
+  #worlds .worlds__desc{color:rgba(255,255,255,.76)}
+}
+
+/* Active card 폭 — 1920:800 / 1440:656 / 2K·4K:860 상한 (시안 실측 800 기준) */
+/* Active card 폭 — 1920:980 / 1440:792 / 1280:704 / 2K·4K 상한 980 */
+.worlds{--slide-w:clamp(760px, 48vw, 960px)}
+@media (max-width:1279px){.worlds{--slide-w:min(760px, calc(100vw - 120px))}}
+@media (max-width:1023px){.worlds{--slide-w:min(720px, calc(100vw - 96px))}}
+@media (min-width:2200px){.worlds{--slide-w:clamp(880px, 26vw, 960px)}}
+@media (max-width:1023px){.worlds{--slide-w:72vw}}
+@media (max-width:360px){.worlds{--slide-w:min(85vw, calc(100vw - 36px))}}
+@media (max-width:330px){.worlds{--slide-w:min(89vw, calc(100vw - 36px))}}
+@media (max-width:767px){
+  /* 시안 기준 — 좌우 20px 만 남기고 이미지가 화면을 시원하게 채웁니다 */
+  .worlds{--slide-w:min(88vw, calc(100vw - 40px))}
+  .worlds__caption,.worlds__counter{margin-left:var(--gutter);margin-right:var(--gutter);width:auto}
+}
+/* 화살표 — 시안대로 캐러셀 '위·오른쪽', active 카드 오른쪽 끝에 맞춥니다 */
+.worlds__nav{
+  width:var(--slide-w);
+  margin:var(--space-text-to-media) auto 0;
+  display:flex;justify-content:flex-end;gap:14px;
+}
+@media (max-width:767px){
+  /* 텍스트 → 화살표 → 카드 간격을 촘촘하게 (아임웹식 연속 리듬) */
+  .worlds__nav{width:auto;margin:var(--space-text-to-media) var(--gutter) 0;justify-content:flex-start;gap:12px}
+  /* 양 끝을 아주 좁게만 dissolve — 카드를 가리지 않습니다 */
+  .worlds__stage{
+    --stage-safe:16px;
+    --wfade:clamp(24px, 8vw, 36px);
+    -webkit-mask-image:linear-gradient(90deg, rgba(0,0,0,0) 0, #000 var(--wfade), #000 calc(100% - var(--wfade)), rgba(0,0,0,0) 100%);
+            mask-image:linear-gradient(90deg, rgba(0,0,0,0) 0, #000 var(--wfade), #000 calc(100% - var(--wfade)), rgba(0,0,0,0) 100%);
+  }
+}
+/* 좌우 이동 — 첨부 아이콘 리소스를 그대로 사용합니다 (CSS 로 다시 그리지 않음).
+   아이콘은 작게, 클릭 영역은 넉넉하게. */
+.arrow{
+  width:52px;height:52px;                 /* hit area */
+  display:grid;place-items:center;
+  border-radius:999px;
+  background:none;
+  -webkit-tap-highlight-color:transparent;
+}
+.arrow img{
+  width:clamp(30px, 2.2vw, 38px);         /* visual size */
+  height:auto;
+  opacity:.8;
+  transform:translateX(0) scale(1);
+  transition:transform 340ms var(--ease), opacity 340ms var(--ease);
+}
+@media (hover:hover){
+  .arrow:hover img{opacity:1}
+  .arrow--prev:hover img{transform:translateX(-2px) scale(1.08)}
+  .arrow--next:hover img{transform:translateX(2px) scale(1.08)}
+}
+.arrow:active img{transform:scale(.95)}
+.arrow:focus-visible img{opacity:1}
+@media (max-width:767px){
+  .arrow{width:44px;height:44px}
+  .arrow img{width:clamp(28px, 8vw, 32px)}
+}
+
+/* ⚠️ 그림자 clipping 방지
+   가로만 잘라 페이지 horizontal scroll 을 막고, 세로는 visible 로 두어
+   카드 그림자가 stage 경계에서 잘리지 않게 합니다.
+   추가로 위·아래 safe padding 을 두어 그림자가 마스크에도 닿지 않게 합니다. */
+.worlds__stage{
+  position:relative;
+  --stage-safe:clamp(22px, 2.4vw, 44px);
+  overflow-x:clip;
+  overflow-y:visible;
+  margin-top:calc(clamp(14px,1.6vw,28px) - var(--stage-safe));
+  padding-block:var(--stage-safe);
+  height:calc(var(--slide-w) * 9 / 16 + var(--stage-safe) * 2);
+  cursor:grab;
+  touch-action:pan-y;
+  -webkit-user-select:none;user-select:none;
+}
+@supports not (overflow-x: clip){ .worlds__stage{overflow:hidden} }
+.worlds__stage.is-dragging{cursor:grabbing}
+.worlds__viewport{position:absolute;top:var(--stage-safe);bottom:var(--stage-safe);right:0;left:50%}
+.slide{
+  position:absolute;
+  top:0;left:0;
+  width:var(--slide-w);
+  aspect-ratio:16/9;
+  margin-left:calc(var(--slide-w) / -2);
+  border-radius:clamp(18px,1.15vw,22px);
+  /* ⚠️ 여기에 overflow 를 걸지 않습니다 — 클리핑은 .slide__inner 전담,
+     .slide 는 carousel 위치(FRAME)만 담당합니다 */
+  /* ⚠️ 배경색을 두지 않습니다.
+     예전에는 #E8E8EA 였는데, 안쪽 레이어가 아주 조금이라도 작아지는 순간
+     이 밝은 색이 카드 테두리처럼 드러났습니다(= 클릭 시 흰 테두리의 진짜 원인). */
+  background:transparent;
+  transform:translate3d(calc(var(--x,0) * 1px),0,0) scale(calc(var(--s,.8) * var(--hs,1)));
+  opacity:calc(var(--o,0) * var(--ho,1));
+  visibility:hidden;
+  /* 이동 · 밝기(DIM) · 이미지 settle 을 모두 640ms / 같은 easing 으로 묶어
+     하나의 모션으로 읽히게 합니다 (§12) */
+  transition:transform 640ms var(--ease), opacity 640ms var(--ease);
+  will-change:transform,opacity;
+}
+/* 중앙 카드는 크기와 위치만으로 읽힙니다 — 테두리도 그림자도 쓰지 않습니다 */
+.slide.is-live{visibility:visible}
+.slide.is-active{z-index:3}
+@media (hover:hover){ .slide.is-live:hover{z-index:40} }
+/* ⚠️ 모바일 공간 이미지 radius 는 전 상태 16px 고정입니다.
+   default / active / drag / carousel transition / touch / scale 어디서도 변하지 않고,
+   클리핑은 .slide__inner(overflow:hidden + radius:inherit)가 전담하므로
+   이미지가 확대·이동하는 동안에도 모서리가 사각으로 변하지 않습니다. */
+@media (max-width:767px){ .slide{border-radius:16px} }
+/* VISUAL 레이어 — scale 애니메이션만 담당합니다.
+   FRAME(.slide)이 위치/크기를 잡고, 여기서만 미세한 press 축소를 처리하므로
+   캐러셀 간격 계산이나 레이아웃이 전혀 흔들리지 않습니다. */
+.slide__inner{position:absolute;inset:0;overflow:hidden;border-radius:inherit;
+  -webkit-mask-image:-webkit-radial-gradient(#fff,#000);   /* Safari 라운드 클립 보정 */
+  transform:translateZ(0) scale(var(--vs,1));
+  transition:transform 200ms var(--ease);
+  background:#11131A}                                       /* 로딩 중에도 흰색이 보이지 않게 */
+/* 중앙에서 멀어질수록 한 겹씩 뒤로 물러나 보이게 하는 DIM.
+   ⚠️ 이미지에 filter 를 걸지 않고 별도 레이어의 opacity 만 바꿉니다(GPU friendly).
+   ⚠️ 섹션 배경의 dim(.worlds__wash / .worlds__scrim)과는 완전히 별개 레이어입니다. */
+.slide__dim{
+  position:absolute;inset:0;
+  background:#000;
+  border-radius:inherit;           /* 이미지와 정확히 같은 모서리 */
+  pointer-events:none;
+  opacity:var(--dim, .4);
+  transition:opacity 640ms var(--ease);    /* 이동 · settle 과 같은 640ms / 같은 easing */
+}
+/* IMAGE BLEED — 이미지를 프레임보다 2% 크게 깔아 둡니다.
+   전환·press 중에 안쪽 레이어가 미세하게 줄어도 가장자리에 빈 공간(=흰 테두리)이
+   생길 수 없습니다. 2% 는 composition 이 달라지지 않는 범위입니다. */
+.slide__inner img{
+  position:absolute;left:-1%;top:-1%;width:102%;height:102%;
+  max-width:none;                 /* ⚠️ 전역 img{max-width:100%} 가 bleed 를 잘라냅니다 */
+  object-fit:cover;object-position:center;
+  -webkit-user-drag:none;user-select:none;pointer-events:none;
+  border-radius:inherit;          /* ⚠️ 래퍼 클립이 흐려져도 모서리가 살아 있게 */
+  /* 기본은 살짝 크게(1.02) → Active 가 되면 정확한 최종 크기(1.00)로 안착합니다.
+     ⚠️ 일회성 keyframe 이 아니라 상태 transition 이라, 되돌아가거나
+        연속 클릭해도 항상 같은 값으로 수렴합니다(hover 와도 충돌하지 않습니다). */
+  transform:scale(var(--z,1.02));
+  transition:transform 640ms var(--ease);
+}
+.slide.is-active .slide__inner img{--z:1}
+.worlds__stage.no-anim .slide{transition:none}
+@media (hover:hover){
+  /* ⚠️ Active 는 hover 해도 절대 작아지지 않습니다.
+     예전 --hs:.98 이 「클릭하니 카드가 줄어든다」의 원인이었습니다. */
+  .slide.is-active:hover{--hs:1}
+  .slide.is-active:hover .slide__inner img{--z:1.012}   /* 안쪽 이미지만 아주 미세하게 */
+  /* 좌우 preview — 아주 미세한 확대 힌트만.
+     ⚠️ hover 로 DIM 이 풀리지 않습니다. 실제 Active 가 되어야만 0% 가 됩니다. */
+  .slide.is-live:not(.is-active):hover{--hs:1.02}
+}
+/* 누르는 동안 — VISUAL 레이어만 0.5% (이미지가 2% 크게 깔려 있어 빈 틈이 생기지 않습니다) */
+.worlds__stage.is-dragging .slide.is-active .slide__inner{--vs:.995}
+
+.worlds{--stage-safe:clamp(22px, 2.4vw, 44px)}
+@media (max-width:767px){
+  .worlds{--stage-safe:16px}
+  /* 캐러셀 ↔ 공간명 22px — 이미지와 이름이 한 덩어리로 읽히게 */
+  .worlds__caption{margin-top:calc(22px - var(--stage-safe))}
+  .worlds__counter{margin-top:20px}
+}
+.worlds__caption{
+  margin-top:calc(var(--space-content-md) - var(--stage-safe, 0px));
+  width:var(--slide-w);
+  margin-inline:auto;
+  min-height:clamp(56px,4vw,76px);
+}
+.worlds__name{
+  font-size:var(--font-heading-3);   /* 20 → 28px (당근 About 카드 제목 스케일) */
+  font-weight:700;
+  letter-spacing:-.025em;
+  color:var(--ink);
+  line-height:1.4;
+}
+.worlds__desc{
+  margin-top:clamp(8px,.62vw,12px);
+  font-size:var(--font-body-md);     /* 15 → 18px, 캡션이 아닌 본문으로 */
+  font-weight:400;
+  line-height:1.6;
+  color:var(--body);                 /* .46 → .62 — 확실히 읽히게 */
+  letter-spacing:-.012em;
+}
+.worlds__caption.is-swap .worlds__name,
+.worlds__caption.is-swap .worlds__desc{opacity:0;transform:translateY(8px)}
+.worlds__name,.worlds__desc{transition:opacity 360ms var(--ease), transform 360ms var(--ease)}
+.worlds__counter{
+  margin-top:var(--space-content-md);
+  width:var(--slide-w);margin-inline:auto;
+  display:flex;align-items:center;gap:12px;
+  font-size:var(--font-caption);font-weight:500;font-variant-numeric:tabular-nums;
+  letter-spacing:.12em;color:var(--body-2nd)
+}
+.worlds__bar{position:relative;flex:1;height:1px;background:rgba(0,0,0,.12);overflow:hidden}
+.worlds__bar i{
+  position:absolute;inset:0;
+  background:var(--ink);
+  transform:scaleX(var(--p,0));
+  transform-origin:left center;
+  transition:transform 620ms var(--ease);
+}
+
+/* ── 06 Cinematic scroll ───────────────────────────────────────── */
+.cine{position:relative;height:210vh;background:#fff}
+.cine__sticky{position:sticky;top:0;height:100svh;display:grid;place-items:center;overflow:hidden}
+.cine__media{
+  position:relative;
+  /* ⚠️ 여기서는 --container(100% 기반) 를 쓰지 않습니다.
+     grid item 안에서 % 가 순환 참조가 되어 p=1 일 때 폭이 0 으로 무너집니다.
+     scroll progress(--p) 0→1 에 따라 full-bleed → max-width 1400 으로 보간합니다. */
+  --cine-w:min(var(--cine-max, 1400px), calc(100vw - 2 * var(--gutter)));
+  width:calc(100vw - (100vw - var(--cine-w)) * var(--p,0));
+  aspect-ratio:16/9;
+  max-height:100svh;
+  /* ⚠️ radius 는 확대·축소 전 구간에서 유지됩니다.
+     full-bleed 구간에서도 0 이 되지 않도록 30% 를 바닥값으로 남겨 둡니다. */
+  border-radius:calc(var(--r-media) * (.3 + .7 * var(--p,0)));
+  background:#2A2C3A;
+}
+/* clipping container(고정 radius) 와 scale 되는 미디어를 분리 —
+   영상이 커지는 동안에도 둥근 모서리가 절대 사라지지 않습니다 */
+.cine__clip{
+  position:absolute;inset:0;
+  overflow:hidden;
+  border-radius:inherit;
+  -webkit-mask-image:-webkit-radial-gradient(#fff,#000);  /* Safari radius clipping 보정 */
+}
+.cine__clip video,
+.cine__clip img{
+  width:100%;height:100%;
+  object-fit:cover;              /* 원본 비율 유지 — 절대 stretch 되지 않습니다 */
+  object-position:center;
+  /* full-bleed 일 때 아주 살짝 확대되어 있다가 카드로 줄어들며 1 로 안착 */
+  transform:scale(calc(1.06 - .06 * var(--p,0)));
+  will-change:transform;
+}
+/* 영상 → DIM → 텍스트 순으로 z-index 를 명확히 분리합니다.
+   전체를 균일하게 어둡게 하지 않고 텍스트가 있는 위쪽만 30% 로 눌러
+   영상 본래의 색감은 최대한 남깁니다. */
+.cine__media::after{
+  content:'';position:absolute;inset:0;z-index:1;
+  border-radius:inherit;
+  background:linear-gradient(180deg,
+    rgba(0,0,0,.30) 0%,
+    rgba(0,0,0,.22) 28%,
+    rgba(0,0,0,.08) 58%,
+    rgba(0,0,0,0)   100%);
+  pointer-events:none;
+}
+/* 이 레이아웃은 카피가 세로 중앙에 놓이므로, 상단 gradient 만으로는
+   밝은 프레임에서 가독성이 부족합니다. 텍스트 자리에만 아주 옅은 타원 scrim 을
+   하나 더 깔아 영상 색감은 유지하면서 흰 글자를 받쳐 줍니다. */
+.cine__media::before{
+  content:'';position:absolute;inset:0;z-index:1;
+  border-radius:inherit;
+  background:
+    radial-gradient(ellipse 62% 34% at 50% 48%, rgba(0,0,0,.26) 0%, rgba(0,0,0,.14) 45%, rgba(0,0,0,0) 72%),
+    linear-gradient(180deg, rgba(0,0,0,0) 74%, rgba(0,0,0,.16) 100%);
+  pointer-events:none;
+}
+.cine__copy{
+  position:absolute;inset:0;z-index:3;   /* 항상 DIM(z1) 위 */
+  display:grid;place-items:center;align-content:center;
+  text-align:center;
+  padding:var(--gutter);
+  color:#fff;
+}
+.cine__copy p{
+  font-size:var(--font-display-lg);
+  line-height:1.15;
+  letter-spacing:-.035em;
+  font-weight:700;
+  text-shadow:0 2px 12px rgba(0,0,0,.18);
+}
+/* 영상 축소와 하나의 연속된 시퀀스로 읽히도록, 텍스트도 같은 언어(line mask)로 */
+.cine__copy .line{display:block}
+.js .cine__copy .line{overflow:hidden;padding-bottom:.14em;margin-bottom:-.14em}
+.js .cine__copy .line > span{
+  display:block;
+  transform:translateY(110%);
+  opacity:0;
+  transition:transform var(--t-reveal) var(--ease), opacity var(--t-reveal) var(--ease);
+}
+.js .cine__copy .line.is-in > span{transform:none;opacity:1}
+.js .cine__copy .line.is-in > span{transition-delay:140ms}
+.js .cine__copy .line:nth-child(2).is-in > span{transition-delay:230ms}
+
+/* 모바일 — full-screen 영상 → 시안의 rounded card 로 연속 축소.
+   width 와 height 를 같은 --p 로 함께 보간하므로 중심점이 흔들리지 않습니다. */
+@media (max-width:767px){
+  .cine{height:200vh}
+  .cine__sticky{position:sticky;top:0;height:100svh;display:grid;place-items:center;overflow:hidden}
+  .cine__media{
+    --cine-w:calc(100vw - 2 * var(--gutter));
+    --cine-h:calc((100vw - 2 * var(--gutter)) * 4 / 3);   /* 시안 카드 = 3:4 */
+    width:calc(100vw - (100vw - var(--cine-w)) * var(--p,0));
+    height:calc(100svh - (100svh - var(--cine-h)) * var(--p,0));
+    aspect-ratio:auto;
+    max-height:none;
+    border-radius:calc(16px * (.3 + .7 * var(--p,0)));
+  }
+  .cine__copy p{font-size:clamp(32px, 9vw, 38px)}
+}
+
+/* ── 07 Community cards ────────────────────────────────────────── */
+.cards{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:clamp(14px,1.1vw,21px);
+  margin-top:clamp(40px, calc(30px + 2.6vw), 80px);   /* 1920:80 · 1440:67 · 1280:63 · 375:40 */
+}
+/* 역할 분리
+   .card         : 레이아웃 + 텍스트 패딩 (스케일 절대 없음)
+   .card__visual : rounded clipping 전담 — 모든 상태에서 radius 동일
+   .card__video  : hover scale / 재생 전담
+   .card__dim    : Black 20% 고정 (hover 로 변하지 않음)
+   .card__title/desc : 최상단                                        */
+.card{
+  --card-r:clamp(14px,1.05vw,20px);   /* 기존 radius 토큰 — 재사용 */
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-end;      /* 텍스트는 하단 좌측 */
+  aspect-ratio:690 / 420;        /* 시안 카드 비율 */
+  padding:clamp(22px,2.1vw,40px);
+  border-radius:var(--card-r);
+  isolation:isolate;
+  background:#20232B;            /* 영상 로드 전 바탕 */
+}
+.card__visual{
+  position:absolute;inset:0;z-index:0;
+  border-radius:var(--card-r);   /* ⚠️ 클리핑은 여기서만 — 절대 scale 하지 않습니다 */
+  overflow:hidden;
+  -webkit-mask-image:-webkit-radial-gradient(#fff,#000);  /* Safari 라운드 클립 보정 */
+  transform:translateZ(0);
+  background:#20232B;
+}
+/* 영상 — 카드 전체를 채웁니다 (원본 비율 유지, stretch 없음) */
+.card__video{
+  position:absolute;inset:0;
+  width:100%;height:100%;
+  object-fit:cover;
+  object-position:center;
+  transform:scale(1);
+  transform-origin:center center;
+  transition:transform 620ms var(--ease);
+}
+/* Black DIM 20% — default / hover / 재생중 모두 동일. 영상과 정확히 같은 영역 */
+.card__dim{
+  position:absolute;inset:0;
+  border-radius:inherit;
+  background:rgba(0,0,0,.20);
+  pointer-events:none;
+}
+.card__title,.card__desc{position:relative;z-index:1}
+.card__title{
+  font-size:var(--font-heading-3);font-weight:700;letter-spacing:-.02em;
+  color:#fff;line-height:1.3;
+  /* DIM 을 20% 로 유지하는 대신 텍스트 자체에 그림자를 실어 가독성 확보 */
+  text-shadow:0 1px 3px rgba(0,0,0,.42), 0 2px 18px rgba(0,0,0,.32);
+  transition:transform 480ms var(--ease);
+}
+.card__desc{
+  margin-top:clamp(8px,.7vw,14px);
+  font-size:var(--font-body-md);font-weight:400;line-height:1.65;
+  color:#fff;opacity:.88;letter-spacing:var(--ls-body);
+  transition:opacity 400ms var(--ease);
+  text-shadow:0 1px 3px rgba(0,0,0,.38), 0 2px 14px rgba(0,0,0,.28);
+}
+@media (hover:hover){
+  /* 스케일은 rounded wrapper 안쪽 video 에만 — radius 는 어떤 상태에서도 불변 */
+  .card:hover .card__video{transform:scale(1.02)}
+  .card:hover .card__title{transform:translateY(-4px)}
+  .card:hover .card__desc{opacity:1}
+}
+@media (max-width:1023px){
+  .cards{gap:clamp(10px,1.2vw,14px)}
+}
+@media (max-width:767px){
+  /* ⚠️ 1fr 의 최소값은 auto(=콘텐츠 min-content) 라서, 영문처럼 긴 문구가 들어오면
+     트랙이 컨테이너보다 넓어져 320px 화면에서 가로 스크롤이 생겼습니다.
+     minmax(0,1fr) 로 최소값을 풀고 카드 안에서 줄바꿈되게 합니다.
+     (한국어에서는 원래 들어맞았으므로 화면이 달라지지 않습니다) */
+  .cards{grid-template-columns:minmax(0,1fr);gap:18px}
+  .card{min-width:0}
+  .card__title,.card__desc{overflow-wrap:anywhere}
+  .card{aspect-ratio:16 / 10;padding:20px;--card-r:var(--radius-card)}   /* 모바일 카드 radius 16 통일 */
+}
+
+/* ── 08 Final CTA + Footer ─────────────────────────────────────── */
+/* 배너 높이를 직접 잡습니다 — 1920에서 300px, 모바일 375에서 360px.
+   그 사이는 vw 기울기로 자연스럽게 이어집니다.
+   padding 대신 min-height + 세로 중앙 정렬이라, 글자가 커져도 배너가 밀리지 않고
+   내용이 배너보다 커지는 극단적인 경우에만 배너가 늘어납니다. */
+.cta{
+  background:var(--band);
+  padding-block:0;
+  min-height:clamp(220px, calc(171px + 6.7vw), 340px);   /* @1920 = 300 */
+  display:flex;align-items:center;
+}
+.cta__inner{display:flex;align-items:center;justify-content:space-between;gap:32px}
+.cta__title{
+  font-size:var(--font-heading-2);
+  line-height:1.25;
+  letter-spacing:-.025em;
+  font-weight:700;
+  color:var(--ink);
+}
+.cta__btn{
+  display:inline-flex;align-items:center;gap:8px;
+  margin-top:var(--space-content-md);   /* 제목 → 버튼 20 → 36px */
+  height:clamp(48px,3.3vw,63px);
+  padding:0 clamp(20px,1.5vw,28px);
+  border-radius:999px;
+  background:var(--ink);color:#fff;
+  font-size:var(--font-btn);font-weight:600;letter-spacing:-.01em;
+  transition:background-color var(--t-ui) var(--ease), transform var(--t-micro) var(--ease);
+}
+.cta__btn:hover{background:#333B45;transform:scale(1.015)}
+.cta__btn:active{transform:scale(.98)}
+.cta__btn svg{
+  width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;
+  transition:transform var(--t-fast) var(--ease);
+}
+.cta__btn:hover svg{transform:translate(3px,-3px)}
+/* ⚠️ 캐릭터 그룹은 절대 늘어나면 안 됩니다.
+   width 만 반응형으로 주고 height:auto + aspect-ratio + object-fit:contain 으로 고정.
+   화면이 좁아지면 이미지가 눌리는 게 아니라 구성 전체가 비례로 작아집니다. */
+.cta__art{
+  flex:none;
+  /* 배너 높이에 맞춰 세로 기준으로 잡습니다(width:auto 이므로 비율 그대로) */
+  height:clamp(150px, calc(134px + 4.9vw), 240px);       /* @1920 = 228, 배너 300 안에서 위아래 36 */
+  width:auto;
+  max-width:46%;
+  aspect-ratio:375 / 269;
+  object-fit:contain;
+  /* ⚠️ 컨테이너(width · height · aspect-ratio · margin)는 그대로입니다.
+     교체된 PNG 는 캔버스(819×556) 안쪽에 좌우 약 10.6% 의 투명 여백을 갖고 있어,
+     같은 슬롯에 contain 으로 넣으면 캐릭터가 이전 리소스보다 약 8% 작게 보입니다.
+     레이아웃을 건드리지 않고 그리기 단계에서만 8% 를 되돌립니다
+     (transform 은 layout box 에 영향을 주지 않습니다).
+     확대분(각 변 4.5%)은 투명 여백(10.6%) 안에서 흡수되므로
+     캐릭터가 컨테이너 밖으로 나가거나 잘리지 않습니다. */
+  transform:scale(1.09);
+  transform-origin:center center;
+}
+/* ── Final CTA · 모바일 ──────────────────────────────────────────
+   시안 composition 그대로: 텍스트·버튼은 왼쪽 정렬, 캐릭터는 그 아래 오른쪽.
+   [이전 섹션] → 104 → 제목 → 28 → 버튼 → 48 → 캐릭터 → 80 → Footer      */
+@media (max-width:767px){
+  .cta{min-height:clamp(352px, calc(341px + 5.1vw), 384px)}   /* @375 = 360 */
+  .cta__inner{display:block}
+  .cta__title{
+    /* 두 구절이 각각 한 줄로 떨어지도록 폭에 맞춰 유동 (@375 31px) */
+    font-size:clamp(26px, 8.3vw, 34px);
+    line-height:1.22;
+    letter-spacing:-.03em;
+  }
+  .cta__btn{margin-top:20px;height:50px;padding:0 22px;font-size:16px}
+  /* ⚠️ 캐릭터 3개는 하나의 PNG composition 입니다.
+     height 만 주고 width:auto + aspect-ratio + object-fit:contain 이므로
+     화면이 좁아져도 개별 캐릭터가 눌리거나 잘리지 않고 비례로만 작아집니다. */
+  .cta__art{display:block;height:clamp(118px, 34vw, 150px);width:auto;max-width:100%;margin-left:auto;margin-top:24px}
+}
+
+.footer{background:var(--band);padding-block:clamp(32px,2.6vw,50px) clamp(36px,3vw,58px);border-top:1px solid rgba(var(--line-rgb),.06)}
+.footer__inner{display:flex;flex-wrap:wrap;gap:24px 48px;align-items:flex-start;justify-content:space-between}
+.footer__logo{display:flex;align-items:center;min-height:44px}
+.footer__logo img{height:22px;width:auto;filter:invert(1) brightness(.16)}
+.footer__links{display:flex;flex-wrap:wrap;gap:10px 28px}
+.footer__links a{font-size:var(--font-nav-2);font-weight:500;color:var(--ink-soft);min-height:44px;display:inline-flex;align-items:center;transition:opacity var(--t-micro) var(--ease)}
+.footer__links a:hover{opacity:.6}
+.footer__bottom{
+  width:100%;margin-top:8px;
+  display:flex;align-items:center;justify-content:space-between;gap:16px 24px;
+}
+.footer__meta{font-size:var(--font-caption);font-weight:400;line-height:1.8;color:var(--body-2nd)}
+/* ── Footer SNS ────────────────────────────────────────────────────
+   아이콘만(텍스트 없음) · 브랜드 컬러 없음 · 원형 배경/그림자 없음.
+   히트 영역(44px)과 보이는 아이콘 크기(20~21px)를 분리합니다.
+   Bootstrap Icons 는 fill 기반이라 각 로고의 "먹는 면적"이 달라서,
+   박스 크기를 기계적으로 같게 두지 않고 optical 로 맞췄습니다.
+     discord   가로로 넓은 실루엣  → 21px
+     youtube   가로로 가장 넓음    → 20px
+     instagram 정사각 외곽선       → 20px                              */
+/* 히트 영역 40×44 · 아이콘 20~21px → 아이콘 사이의 "보이는" 간격이 정확히 20px.
+   (44×44 로 두면 보이는 간격이 24px 이 되어 요청하신 16~20px 범위를 벗어납니다) */
+.footer__sns{display:flex;align-items:center;justify-content:flex-end;flex:none;margin-right:-10px}
+.footer__sns-a{
+  width:40px;height:44px;
+  display:inline-flex;align-items:center;justify-content:center;
+  color:var(--ink-soft);opacity:.65;
+  transition:opacity 200ms cubic-bezier(.22,1,.36,1),
+             transform 200ms cubic-bezier(.22,1,.36,1),
+             color 200ms cubic-bezier(.22,1,.36,1);
+}
+.footer__sns-a .ic{fill:currentColor;stroke:none;display:block}
+.footer__sns-a .ic--discord{width:21px;height:21px}
+.footer__sns-a .ic--youtube{width:20px;height:20px}
+.footer__sns-a .ic--instagram{width:20px;height:20px}
+@media (hover:hover){
+  .footer__sns-a:hover{opacity:1;color:var(--ink);transform:translateY(-2px)}
+}
+.footer__sns-a:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:10px}
+@media (prefers-reduced-motion:reduce){ .footer__sns-a{transition-duration:1ms} }
+/* 모바일 — 억지로 오른쪽에 붙이지 않고 Copyright 아래로 자연스럽게 내려옵니다.
+   좌우 여백 기준선을 맞추기 위해 44px 히트 영역만큼 바깥으로 상쇄합니다. */
+@media (max-width:767px){
+  .footer__bottom{flex-direction:column;align-items:flex-start;gap:10px}
+  .footer__sns{justify-content:flex-start;margin-left:-10px;margin-right:0}
+}
+
+/* ══ 09 Reveal system ═══════════════════════════════════════════════
+   딱 세 가지만 씁니다. 그 외 요소는 정지 상태를 유지합니다(§scroll rhythm).
+     .r-line  헤드라인 — mask line reveal (가장 강한 연출)
+     .reveal  본문·카드 — fade-up (절제)
+     .rv-img  큰 비주얼 — 컨테이너 고정 + 내부만 scale (radius 유지)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* 09-1. 헤드라인 line reveal — 아래에서 마스크가 걷히듯.
+   구조(줄바꿈)는 JS 없이도 유지되고, 움직임만 .js 로 게이트합니다. */
+.r-line{display:block}
+.r-line--inline{display:inline-block;vertical-align:top}
+.r-line--inline + .r-line--inline{margin-left:.28em}
+/* 모바일 시안은 두 구절이 각각 한 줄 — 줄바꿈 위치를 고정합니다 */
+@media (max-width:767px){
+  .r-line--inline{display:block}
+  .r-line--inline + .r-line--inline{margin-left:0}
+}
+.js .r-line{
+  overflow:hidden;
+  padding-bottom:.12em;   /* 디센더가 잘리지 않게 자리를 벌리고 */
+  margin-bottom:-.12em;   /* 같은 값의 음수 마진으로 레이아웃은 되돌립니다 */
+}
+.js .r-line > span{
+  display:block;
+  transform:translateY(110%);
+  opacity:0;
+  transition:transform var(--t-reveal) var(--ease), opacity var(--t-reveal) var(--ease);
+}
+.js .is-in .r-line > span{transform:none;opacity:1}
+/* ── blur + fade 계열 헤드라인 (Toss 계열 모션) ─────────────────────
+   기본 .r-line 은 「마스크 안에서 밀어 올리는」 방식이라 blur 를 쓰면
+   번짐이 마스크에 잘립니다. 그래서 이 변형에서는 마스크를 풀고
+   opacity + blur + translateY 를 함께 보간합니다.
+   easing · duration · stagger 는 사이트 공통 토큰을 그대로 씁니다.       */
+.js .r-line--soft{overflow:visible;padding-bottom:0;margin-bottom:0}
+.js .r-line--soft > span{
+  transform:translateY(var(--rv-y));
+  opacity:0;
+  filter:blur(6px);
+  transition:transform var(--t-reveal) var(--ease),
+             opacity   var(--t-reveal) var(--ease),
+             filter    var(--t-reveal) var(--ease);
+}
+.js .is-in .r-line--soft > span{transform:none;opacity:1;filter:blur(0)}
+@media (max-width:767px){ .js .r-line--soft > span{filter:blur(4px)} }   /* 모바일은 강도를 낮춥니다 */
+.js .is-in .r-line:nth-child(2) > span{transition-delay:calc(var(--stagger))}
+.js .is-in .r-line:nth-child(3) > span{transition-delay:calc(var(--stagger) * 2)}
+
+/* 09-2. 본문·카드 fade-up — 헤드라인보다 늦게, 더 얕게 */
+.js .reveal{opacity:0;transform:translateY(var(--rv-y))}
+.js .reveal.is-in{
+  opacity:1;transform:none;
+  transition:opacity var(--t-reveal) var(--ease), transform var(--t-reveal) var(--ease);
+}
+/* 커뮤니티 카드 — 올라오면서 아주 미세하게 자리를 잡습니다 (.985 → 1).
+   두 문장이 먼저 올라온 뒤 왼쪽 → 오른쪽 순으로 이어집니다
+   (문장1 0 → 문장2 +80 → 카드A +160 → 카드B +260ms). */
+.js .card.reveal{transform:translateY(var(--rv-y)) scale(.985)}
+.js .card.reveal.is-in{transform:none;transition-delay:calc(var(--stagger) * 2)}
+.js .card.reveal--2.is-in{transition-delay:calc(var(--stagger) * 3.25)}
+@media (max-width:767px){ .js .card.reveal{transform:translateY(var(--rv-y)) scale(.992)} }
+.js .reveal--2.is-in{transition-delay:calc(var(--stagger) * 1.2)}
+.js .reveal--3.is-in{transition-delay:calc(var(--stagger) * 2.2)}
+
+/* 헤드라인 두 줄이 다 올라온 뒤 본문 (약 200ms 시차) */
+.js .section-head .section-desc{opacity:0;transform:translateY(16px)}
+.js .section-head.is-in .section-desc{
+  opacity:1;transform:none;
+  transition:opacity var(--t-normal) var(--ease) calc(var(--stagger) * 2.6),
+             transform var(--t-normal) var(--ease) calc(var(--stagger) * 2.6);
+}
+
+/* 09-3. 큰 비주얼 — 공간이 열리며 드러나는 느낌.
+   ⚠️ radius 를 가진 래퍼는 고정하고 내부 이미지만 transform 합니다.
+   ⚠️ transform 이 아니라 translate/scale 개별 속성을 씁니다 —
+      hover 의 transform 과 겹쳐도 서로 지워지지 않습니다. */
+.js .rv-img{opacity:0;translate:0 calc(var(--rv-y) * .6)}
+.js .rv-img.is-in{
+  opacity:1;translate:0 0;
+  transition:opacity var(--t-cine) var(--ease-soft), translate var(--t-cine) var(--ease-soft);
+}
+/* CTA 캐릭터 그룹 — 하나의 구성이 조용히 등장 (bounce·개별 비행 금지) */
+.js .cta__art{opacity:0;scale:.96;translate:0 12px}
+.js .cta__art.is-in{
+  opacity:1;scale:1;translate:0 0;
+  transition:opacity 900ms var(--ease-soft) calc(var(--stagger) * 3.4),
+             scale     900ms var(--ease-soft) calc(var(--stagger) * 3.4),
+             translate 900ms var(--ease-soft) calc(var(--stagger) * 3.4);
+}
+/* CTA 버튼 — 헤드라인 다음에 fade-up */
+.js .cta__text .cta__btn{opacity:0;translate:0 16px}
+.js .cta__text.is-in .cta__btn{
+  opacity:1;translate:0 0;
+  transition:opacity var(--t-normal) var(--ease) calc(var(--stagger) * 2.4),
+             translate var(--t-normal) var(--ease) calc(var(--stagger) * 2.4),
+             background-color var(--t-ui) var(--ease),
+             transform var(--t-fast) var(--ease);
+}
+
+/* 09-4. 캐릭터 rail — rail 전체가 먼저 들어오고, 앞쪽 카드만 아주 짧게 stagger.
+   (entrance 는 translate, hover 는 transform 이라 서로 간섭하지 않습니다) */
+.js .marquee__card{opacity:0;translate:0 32px}
+.js .marquee.is-in .marquee__card{
+  opacity:1;translate:0 0;
+  transition:opacity var(--t-reveal) var(--ease), translate var(--t-reveal) var(--ease),
+             transform 680ms var(--ease-soft);
+  transition-delay:calc(var(--stagger) * 2.6 + var(--i, 0) * 60ms),
+                   calc(var(--stagger) * 2.6 + var(--i, 0) * 60ms), 0s;
+}
+
+/* 히어로 인트로 — 정적인 화면처럼 보이지 않을 만큼만.
+   ⚠️ 이미지 entrance scale 은 .shero__imgs(래퍼)에 겁니다.
+   scroll scrub 이 쓰는 .shero__img 의 --is 와 곱해져도 서로 간섭하지 않습니다. */
+.js .shero__imgs{opacity:0;transform:scale(1.015)}
+.is-ready .shero__imgs{
+  opacity:1;transform:none;
+  transition:opacity 1400ms var(--ease-soft), transform 1500ms var(--ease-soft);
+}
+/* 이미지가 먼저 자리를 잡고(.34s) 그 다음 두 줄이 130ms 간격으로 올라옵니다.
+   글자 단위 애니메이션 · bounce · typing 은 쓰지 않습니다. */
+.js .shero__lead .line > span{opacity:0;transform:translateY(34px)}
+.is-ready .shero__lead .line > span{
+  opacity:1;transform:none;
+  transition:opacity 880ms var(--ease-soft), transform 880ms var(--ease-soft);
+}
+.is-ready .shero__lead .line:nth-child(1) > span{transition-delay:.34s}
+.is-ready .shero__lead .line:nth-child(2) > span{transition-delay:.47s}
+.js .shero__cue{opacity:0;transform:translateX(-50%) translateY(22px)}
+.is-ready .shero__cue{
+  opacity:var(--cue,1);transform:translateX(-50%);
+  transition:opacity 820ms var(--ease), transform 820ms var(--ease);
+  transition-delay:.86s;
+}
+.js .header{opacity:0}
+.is-ready .header{opacity:1;
+  /* ⚠️ transform 을 함께 적어 두지 않으면 인트로 전환이 Smart Header 전환을 덮어씁니다 */
+  transition:opacity 900ms var(--ease) .1s, transform 320ms var(--ease)}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important;scroll-behavior:auto !important}
+  .js .reveal,.js .rv-img,.js .cta__art,
+  .js .section-head .section-desc,.js .cta__text .cta__btn,.js .drawer__foot{
+    opacity:1;transform:none;translate:none;scale:none;
+  }
+  .js .r-line > span,.js .cine__copy .line > span{transform:none;opacity:1}
+  .js .r-line,.js .cine__copy .line{overflow:visible}
+  .cine__clip video,.cine__clip img{transform:none}
+  .js .marquee__card{opacity:1;translate:none;transform:none}
+  .marquee__card:hover,.marquee__card:hover img{transform:none}
+  .js .shero__lead .line > span{opacity:1;transform:none}
+  .js .shero__copy .shero__side .w > i{opacity:1;transform:none}
+  .js .shero__imgs{opacity:1;transform:none}
+  .js .header{opacity:1}
+  .js .shero__cue{opacity:1;transform:none}
+  .js .shero__cue{transform:translateX(-50%)}
+  .shero__cue img{animation:none}
+  .cine__copy .line{opacity:1;transform:none;filter:none}
+  .slide__inner,.slide__inner img,.slide__dim{transition:none}
+}
+
+/* ══ MOBILE — Touch feedback ═══════════════════════════════════════
+   Hover 가 없는 환경에서 hover 효과를 억지로 흉내 내지 않고,
+   눌렀을 때만 아주 짧게 가라앉습니다 (§13: scale .985~.99 · 150~220ms).
+   기존에 .97 / .98 로 세게 눌리던 요소도 여기서 한 단계 부드럽게 맞춥니다. */
+@media (hover:none){
+  .btn:active,.btn--light:active,.btn--ghost:active,.btn-download:active,
+  .sbtn:active,.abtn:active,.mpbtn:active,.mpbtn-s:active,.cta__btn:active,
+  .dl__btn:active,.dl__card:active,.drv__btn:active,.smore__btn:active,
+  .spsel__btn:active,.stab:active,.faq__q:active,.wtab:active,
+  .nrow__link:active,.ecard__link:active,.ntab:active,
+  .marquee__card:active,.wcard:active,.card:active,
+  .drawer__cta:active,.pwtog:active,.spsearch__clear:active{
+    transform:scale(.99);
+    transition:transform 180ms var(--ease);
+  }
+  /* 눌림이 끝나면 원래대로 — 되돌아오는 쪽이 조금 더 길게 */
+  .btn,.sbtn,.abtn,.mpbtn,.mpbtn-s,.cta__btn,.dl__btn,.drv__btn,.smore__btn,
+  .spsel__btn,.stab,.faq__q,.nrow__link,.ecard__link,.marquee__card,.wcard{
+    transition-property:background-color,color,border-color,box-shadow,opacity,transform;
+    transition-duration:200ms;
+  }
+}
+
+/* ══ MOBILE — Form control 높이 통일 ═══════════════════════════════
+   화면마다 50 / 54 / 56 으로 제각각이던 높이를 52px 하나로 맞춥니다.
+   폭은 이미 전 페이지가 20px 그리드(320 @375)를 쓰고 있어 그대로 둡니다. */
+@media (max-width:767px){
+  :root{--sp-fld-h:52px}
+}
+</style>
+
+<!-- Dark Theme — 위 <style> 의 Light 토큰을 html[data-theme="dark"] 에서 재정의합니다 -->
+<link rel="stylesheet" href="assets/sp-theme.css">
+<link rel="stylesheet" href="assets/sp-nav.css">
+
+<!-- 공통 Account / Session 모듈 (PROTOTYPE ONLY) -->
+<script src="assets/sp-auth.js"></script>
+<!-- 공통 Dropdown / Select / Search 시스템 -->
+<script src="assets/sp-ui.js"></script>
+<script src="assets/sp-nav.js"></script>
+</head>
+<body>
+
+<!-- ═══════════════ HEADER ═══════════════ -->
+<header class="header" id="header">
+  <div class="header__inner">
+    <a class="header__logo" href="#" aria-label="SuperPlat 홈" data-i18n-aria>
+      <img src="assets/logo-superplat.png" alt="SuperPlat" width="366" height="132">
+    </a>
+
+    <nav class="header__nav" aria-label="주요 메뉴" data-i18n-aria>
+      <a class="header__link" href="#about" data-i18n="nav1">소개</a>
+      <a class="header__link" href="world.html" data-i18n="nav2">월드 &amp; IP</a>
+      <a class="header__link" href="news.html" data-i18n="nav3">뉴스</a>
+      <a class="header__link" href="support.html" data-i18n="nav4">고객지원</a>
+    </nav>
+
+    <div class="header__actions">
+      <div class="header__lang" id="lang">
+        <button class="header__icon" type="button" id="langBtn" aria-haspopup="true" aria-expanded="false" aria-label="언어 선택" data-i18n-aria>
+          <svg class="ic ic--globe" viewBox="0 0 16 16" aria-hidden="true"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm7.5-6.923c-.67.204-1.335.82-1.887 1.855A7.97 7.97 0 0 0 5.145 4H7.5V1.077zM4.09 4a9.267 9.267 0 0 1 .64-1.539 6.7 6.7 0 0 1 .597-.933A7.025 7.025 0 0 0 2.255 4H4.09zm-.582 3.5c.03-.877.138-1.718.312-2.5H1.674a6.958 6.958 0 0 0-.656 2.5h2.49zM4.847 5a12.5 12.5 0 0 0-.338 2.5H7.5V5H4.847zM8.5 5v2.5h2.99a12.495 12.495 0 0 0-.337-2.5H8.5zM4.51 8.5a12.5 12.5 0 0 0 .337 2.5H7.5V8.5H4.51zm3.99 0V11h2.653c.187-.765.306-1.608.338-2.5H8.5zM5.145 12c.138.386.295.744.468 1.068.552 1.035 1.218 1.65 1.887 1.855V12H5.145zm.182 2.472a6.696 6.696 0 0 1-.597-.933A9.268 9.268 0 0 1 4.09 12H2.255a7.024 7.024 0 0 0 3.072 2.472zM3.82 11a13.652 13.652 0 0 1-.312-2.5h-2.49c.062.89.291 1.733.656 2.5H3.82zm6.853 3.472A7.024 7.024 0 0 0 13.745 12H11.91a9.27 9.27 0 0 1-.64 1.539 6.688 6.688 0 0 1-.597.933zM8.5 12v2.923c.67-.204 1.335-.82 1.887-1.855.173-.324.33-.682.468-1.068H8.5zm3.68-1h2.146c.365-.767.594-1.61.656-2.5h-2.49a13.65 13.65 0 0 1-.312 2.5zm2.802-3.5a6.959 6.959 0 0 0-.656-2.5H12.18c.174.782.282 1.623.312 2.5h2.49zM11.27 2.461c.247.464.462.98.64 1.539h1.835a7.024 7.024 0 0 0-3.072-2.472c.218.284.418.598.597.933zM10.855 4a7.966 7.966 0 0 0-.468-1.068C9.835 1.897 9.17 1.282 8.5 1.077V4h2.355z"/></svg>
+        </button>
+        <div class="header__langmenu" role="menu" aria-labelledby="langBtn">
+          <button type="button" role="menuitem" data-lang="ko" aria-current="true">한국어</button>
+          <button type="button" role="menuitem" data-lang="en" aria-current="false">English</button>
+        </div>
+      </div>
+
+      <button class="header__icon header__theme" type="button" id="themeBtn"
+              aria-label="다크 모드로 전환" title="다크 모드로 전환">
+        <svg class="ic ic--moon" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 .278a.77.77 0 0 1 .08.858 7.2 7.2 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277q.792-.001 1.533-.16a.79.79 0 0 1 .81.316.73.73 0 0 1-.031.893A8.35 8.35 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.75.75 0 0 1 6 .278M4.858 1.311A7.27 7.27 0 0 0 1.025 7.71c0 4.02 3.279 7.276 7.319 7.276a7.32 7.32 0 0 0 5.205-2.162q-.506.063-1.029.063c-4.61 0-8.343-3.714-8.343-8.29 0-1.167.242-2.278.681-3.286"/></svg>
+        <svg class="ic ic--sun" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6m0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5M3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8m10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0m-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0m9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707M4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707"/></svg>
+      </button>
+
+      <a class="header__icon header__login" href="auth.html" aria-label="로그인" data-i18n-aria>
+        <svg class="ic ic--person" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3Zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/></svg>
+      </a>
+
+      <a class="btn-download" href="#download" data-i18n="download">다운로드</a>
+
+      <button class="header__burger" type="button" id="burger" aria-label="메뉴 열기" data-i18n-aria aria-expanded="false" aria-controls="drawer">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- 모바일 드로어 -->
+<div class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="전체 메뉴" data-i18n-aria inert>
+  <nav class="drawer__nav" aria-label="모바일 메뉴" data-i18n-aria>
+    <a href="#about" data-i18n="nav1">소개</a>
+    <a href="world.html" data-i18n="nav2">월드 &amp; IP</a>
+    <a href="news.html" data-i18n="nav3">뉴스</a>
+    <a href="support.html" data-i18n="nav4">고객지원</a>
+  </nav>
+  <div class="drawer__foot">
+    <section class="drawer__prefs" aria-labelledby="prefsTitle">
+      <h2 class="drawer__prefs-t" id="prefsTitle" data-i18n-ko>화면 설정</h2>
+
+      <div class="drawer__prow">
+        <span class="drawer__plabel" data-i18n-ko>테마</span>
+        <div class="drawer__seg" role="radiogroup" aria-label="테마 선택" data-i18n-aria>
+          <button type="button" role="radio" data-theme-set="light" aria-checked="false" aria-label="라이트 모드" data-i18n-aria>
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6m0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5M3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8m10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0m-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0m9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707M4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707"/></svg><span data-i18n-ko>라이트</span>
+          </button>
+          <button type="button" role="radio" data-theme-set="dark" aria-checked="false" aria-label="다크 모드" data-i18n-aria>
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 .278a.77.77 0 0 1 .08.858 7.2 7.2 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277q.792-.001 1.533-.16a.79.79 0 0 1 .81.316.73.73 0 0 1-.031.893A8.35 8.35 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.75.75 0 0 1 6 .278M4.858 1.311A7.27 7.27 0 0 0 1.025 7.71c0 4.02 3.279 7.276 7.319 7.276a7.32 7.32 0 0 0 5.205-2.162q-.506.063-1.029.063c-4.61 0-8.343-3.714-8.343-8.29 0-1.167.242-2.278.681-3.286"/></svg><span data-i18n-ko>다크</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="drawer__prow">
+        <span class="drawer__plabel" data-i18n-ko>언어</span>
+        <div class="drawer__seg" role="group" aria-label="언어 선택" data-i18n-aria>
+          <button type="button" data-lang="ko" aria-current="true" aria-label="한국어" lang="ko">한국어</button>
+          <button type="button" data-lang="en" aria-current="false" aria-label="English" lang="en">English</button>
+        </div>
+      </div>
+    </section>
+    <a class="drawer__login" href="auth.html" data-i18n="login">로그인</a>
+    <a class="drawer__cta" href="#download" data-i18n="download">다운로드</a>
+  </div>
+</div>
+
+<main>
+<!-- ═══════════════ HERO — Sticky Scroll Sequence ═══════════════
+     하나의 이미지가 FULL SCREEN → SHRINK → ROUND → TEXT REVEAL →
+     IMAGE TRANSITION → TEXT TRANSITION → NEXT SECTION 으로 이어집니다.
+     Scene 별로 section 을 나누지 않고 track 하나의 progress 로 제어합니다. -->
+<section class="shero" id="hero" aria-label="SuperPlat 소개">
+  <div class="shero__track" id="sheroTrack">
+    <div class="shero__stage" id="sheroStage">
+
+      <!-- ⚠️ 이 frame 하나가 계속 변형됩니다. 이미지가 교체돼도
+           width / height / border-radius / position 은 그대로입니다. -->
+      <div class="shero__frame" id="sheroFrame">
+        <div class="shero__imgs">
+          <img class="shero__img" data-scene="0" src="assets/hero-scene-town.jpg"
+               alt="슈퍼플랫 거리에서 캐릭터들과 함께 셀카를 찍는 두 사람"
+               width="1778" height="1000" fetchpriority="high" decoding="async">
+          <img class="shero__img" data-scene="1" src="assets/hero-scene-gallery.jpg"
+               alt="자신의 전시 공간을 둘러보는 캐릭터"
+               width="314" height="314" decoding="async">
+          <img class="shero__img" data-scene="2" src="assets/hero-scene-campus.jpg"
+               alt="캠퍼스 잔디밭에 둘러앉아 이야기하는 캐릭터들"
+               width="314" height="314" decoding="async">
+        </div>
+        <div class="shero__scrim" id="sheroScrim" aria-hidden="true"></div>
+      </div>
+
+      <h1 class="shero__lead" id="sheroLead" lang="ko">
+        <span class="line"><span data-i18n="h1a">혼자 보던 세계에서</span></span>
+        <span class="line"><span data-i18n="h1b">다같이 노는 세계로</span></span>
+      </h1>
+
+      <!-- 좌우 카피 — 두 행이 같은 자리에 겹쳐 있고 progress 로 교차합니다 -->
+      <div class="shero__copy" aria-hidden="true">
+        <div class="shero__row" data-row="0">
+          <p class="shero__side shero__side--l" lang="ko"><span data-i18n="sc1a">나만의 공간이</span></p>
+          <p class="shero__side shero__side--r" lang="ko"><span data-i18n="sc1b">미술관이 되고</span></p>
+        </div>
+        <div class="shero__row" data-row="1">
+          <p class="shero__side shero__side--l" lang="ko"><span data-i18n="sc2a">상상이 되고</span></p>
+          <p class="shero__side shero__side--r" lang="ko"><span data-i18n="sc2b">캠퍼스가 되는곳</span></p>
+        </div>
+      </div>
+
+      <!-- --card 는 min() 이 섞여 있어 문자열로는 못 읽습니다. 실제 폭을 재는 probe -->
+      <i class="shero__probe" id="sheroProbe" aria-hidden="true"></i>
+
+      <a class="shero__cue" id="sheroCue" href="#worlds" aria-label="다음 섹션으로 이동">
+        <img src="assets/scroll-cue.png" alt="" aria-hidden="true"
+             width="84" height="42" decoding="async">
+      </a>
+    </div>
+  </div>
+
+  <!-- prefers-reduced-motion 전용 정적 시퀀스 (JS 가 .is-static 일 때만 보입니다) -->
+  <div class="shero__static wrap" id="sheroStatic" hidden>
+    <div class="shero__row">
+      <p class="shero__side shero__side--l" lang="ko"><span data-i18n="sc1a">나만의 공간이</span></p>
+      <div class="shero__scard"><img src="assets/hero-scene-gallery.jpg" alt="자신의 전시 공간을 둘러보는 캐릭터" width="314" height="314" loading="lazy" decoding="async"></div>
+      <p class="shero__side shero__side--r" lang="ko"><span data-i18n="sc1b">미술관이 되고</span></p>
+    </div>
+    <div class="shero__row">
+      <p class="shero__side shero__side--l" lang="ko"><span data-i18n="sc2a">상상이 되고</span></p>
+      <div class="shero__scard"><img src="assets/hero-scene-campus.jpg" alt="캠퍼스 잔디밭에 둘러앉아 이야기하는 캐릭터들" width="314" height="314" loading="lazy" decoding="async"></div>
+      <p class="shero__side shero__side--r" lang="ko"><span data-i18n="sc2b">캠퍼스가 되는곳</span></p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 02 · SPACE CAROUSEL ═══════════════ -->
+<section class="s-gray" id="worlds" aria-labelledby="s03t">
+  <!-- 선택된 공간의 분위기가 섹션 전체로 번지는 ambient 배경.
+       ⚠️ 카드와 정확히 같은 image source 를 재사용합니다 (별도 리소스 없음).
+       2장을 번갈아 crossfade 하므로 교체 순간에 flash 가 생기지 않습니다. -->
+  <div class="worlds__bg" aria-hidden="true"></div>
+  <div class="worlds__wash" aria-hidden="true"></div>
+  <div class="worlds__scrim" aria-hidden="true"></div>
+
+  <div class="wrap">
+    <div class="section-head">
+      <h2 class="section-title" id="s03t" lang="ko">
+        <span class="r-line"><span data-i18n="s03a">오늘은 어디부터</span></span>
+        <span class="r-line"><span data-i18n="s03b">가볼까요?</span></span>
+      </h2>
+      <p class="section-desc" lang="ko">
+        <span data-i18n="s03c">전시를 둘러보고, 공연을 즐기고,</span><br>
+        <span data-i18n="s03d">사람들이 모인 곳으로 향합니다.</span><br>
+        <span data-i18n="s03e">정해진 길은 없습니다. 마음 가는 대로 돌아다녀 보세요.</span>
+      </p>
+    </div>
+  </div>
+
+  <div class="worlds rv-img">
+    <div class="worlds__nav">
+      <button class="arrow arrow--prev" id="wPrev" type="button" aria-label="이전 공간">
+        <img src="assets/arrow-prev.png" alt="" aria-hidden="true" width="100" height="84" decoding="async">
+      </button>
+      <button class="arrow arrow--next" id="wNext" type="button" aria-label="다음 공간">
+        <img src="assets/arrow-next.png" alt="" aria-hidden="true" width="100" height="84" decoding="async">
+      </button>
+    </div>
+    <div class="worlds__stage" id="wStage" tabindex="0" role="group"
+         aria-roledescription="캐러셀" aria-label="SuperPlat 공간 둘러보기">
+      <div class="worlds__viewport" id="wViewport"></div>
+    </div>
+    <div class="worlds__caption" id="wCaption">
+      <p class="worlds__name" id="wName" aria-live="polite">&nbsp;</p>
+      <p class="worlds__desc" id="wDesc">&nbsp;</p>
+    </div>
+    <div class="worlds__counter" aria-hidden="true">
+      <span id="wIndex">01</span>
+      <span class="worlds__bar"><i id="wBar"></i></span>
+      <span id="wTotal">14</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 03 · CHARACTER RAIL ═══════════════ -->
+<section class="s-white" id="about" aria-labelledby="s02t">
+  <div class="wrap">
+    <div class="section-head">
+      <h2 class="section-title" id="s02t" lang="ko">
+        <span class="r-line"><span data-i18n="s02a">좋아하는 캐릭터에게</span></span>
+        <span class="r-line"><span data-i18n="s02b">말을 걸어 보세요!</span></span>
+      </h2>
+      <p class="section-desc" lang="ko">
+        <span data-i18n="s02c">만나고 싶던 캐릭터가 같은 공간에 서있습니다.</span><br>
+        <span data-i18n="s02d">무슨 이야기든 괜찮습니다. 오늘 있었던 일도, 그냥 떠오른 질문도요.</span>
+      </p>
+    </div>
+  </div>
+
+  <div class="marquee" id="marquee" aria-label="SuperPlat 캐릭터" data-i18n-aria>
+    <div class="marquee__frame">
+      <div class="marquee__track" id="marqueeTrack"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 04 · CINEMATIC SCROLL ═══════════════ -->
+<section class="cine" id="cine" aria-labelledby="s04t">
+  <div class="cine__sticky">
+    <figure class="cine__media" id="cineMedia">
+      <div class="cine__clip">
+        <video id="cineVideo" poster="assets/superplat-video-poster.jpg"
+               muted loop playsinline autoplay preload="metadata"
+               aria-label="SuperPlat 월드 영상 — 대관람차, 공연장, 페스티벌, 다양한 공간들">
+          <source id="cineSrc" src="assets/superplat-video.mp4" type="video/mp4">
+        </video>
+        <script>
+        /* ⚠️ <source media> 는 Chromium 의 video 리소스 선택에서 무시됩니다.
+           좁은 화면에는 720p(2.3MB)를, 그 외에는 1080p(5.6MB)를 씁니다.
+           video 바로 뒤에서 실행돼 본 파일을 받기 전에 교체됩니다. */
+        (function () {
+          try {
+            if (innerWidth <= 900) {
+              document.getElementById('cineSrc').src = 'assets/superplat-video-720.mp4';
+              document.getElementById('cineVideo').load();
+            }
+          } catch (e) {}
+        })();
+        </script>
+      </div>
+      <figcaption class="cine__copy">
+        <p id="s04t" lang="ko">
+          <span class="line"><span data-i18n="s04a">혼자 걸어도 되고,</span></span>
+          <span class="line"><span data-i18n="s04b">같이 걸어도 됩니다.</span></span>
+        </p>
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ═══════════════ 05 · COMMUNITY CARDS ═══════════════ -->
+<section class="s-cards" id="news" aria-labelledby="s05t">
+  <div class="wrap">
+    <h2 class="section-title section-head" id="s05t" lang="ko">
+      <span class="r-line r-line--soft"><span data-i18n="s05a1">같은 공간에,</span></span><span class="r-line r-line--soft"><span data-i18n="s05a2">다른 사람들이 있습니다.</span></span>
+    </h2>
+    <div class="cards">
+      <article class="card card--a reveal">
+        <div class="card__visual">
+          <video class="card__video" poster="assets/community-friends-poster.jpg"
+                 muted loop playsinline preload="metadata"
+                 aria-label="친구들과 함께 피크닉을 즐기는 슈퍼플랫 장면">
+            <source src="assets/community-friends.mp4" type="video/mp4">
+          </video>
+          <span class="card__dim" aria-hidden="true"></span>
+        </div>
+        <h3 class="card__title" lang="ko" data-i18n="s05b">친구를 데려와 구경하세요</h3>
+        <p class="card__desc" lang="ko">
+          <span data-i18n="s05c">또 다른 세계 슈퍼플랫에서 사귄</span><br>
+          <span data-i18n="s05d">취미 맞는 친구들을 만나 보세요!</span>
+        </p>
+      </article>
+      <article class="card card--b reveal reveal--2">
+        <div class="card__visual">
+          <video class="card__video" poster="assets/community-events-poster.jpg"
+                 muted loop playsinline preload="metadata"
+                 aria-label="불꽃놀이가 열리는 밤의 슈퍼타운 장면">
+            <source src="assets/community-events.mp4" type="video/mp4">
+          </video>
+          <span class="card__dim" aria-hidden="true"></span>
+        </div>
+        <h3 class="card__title" lang="ko" data-i18n="s05e">열리는 이벤트에 함께 가세요</h3>
+        <p class="card__desc" lang="ko">
+          <span data-i18n="s05f">퀴즈쇼, 라이브 이벤트, 영화관람까지!</span><br>
+          <span data-i18n="s05g">슈퍼타운 주민들과 함께 다양한 이벤트에 참여해 보세요</span>
+        </p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ FINAL CTA ═══════════════ -->
+<section class="cta" id="download" aria-labelledby="ctat">
+  <div class="wrap cta__inner">
+    <div class="cta__text section-head">
+      <h2 class="cta__title" id="ctat" lang="ko">
+        <span class="r-line r-line--inline"><span data-i18n="ctaa">문은 열려있습니다.</span></span><span class="r-line r-line--inline"><span data-i18n="ctab">지금 바로 들어와 보세요!</span></span>
+      </h2>
+      <a class="cta__btn" href="#download">
+        <span data-i18n="ctac">다운로드 바로가기</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg>
+      </a>
+    </div>
+    <img class="cta__art rv-img" src="assets/cta-characters.png" alt="" aria-hidden="true" width="375" height="269" loading="lazy" decoding="async">
+  </div>
+</section>
+</main>
+
+<footer class="footer" id="support">
+  <div class="wrap footer__inner">
+    <a class="footer__logo" href="#" aria-label="SuperPlat 홈" data-i18n-aria>
+      <img src="assets/logo-superplat.png" alt="SuperPlat" width="366" height="132">
+    </a>
+    <nav class="footer__links" aria-label="푸터 메뉴" data-i18n-aria>
+      <a href="#about" data-i18n="nav1">소개</a>
+      <a href="world.html" data-i18n="nav2">월드 &amp; IP</a>
+      <a href="news.html" data-i18n="nav3">뉴스</a>
+      <a href="support.html" data-i18n="nav4">고객지원</a>
+      <a href="terms.html" data-i18n="terms">이용약관</a>
+      <a href="privacy.html" data-i18n="privacy">개인정보처리방침</a>
+    </nav>
+    <div class="footer__bottom">
+      <p class="footer__meta">© 2026 SuperPlat. All rights reserved.</p>
+      <div class="footer__sns">
+        <a class="footer__sns-a" href="https://discord.com/invite/BNRVBgJd" target="_blank" rel="noopener noreferrer" aria-label="SuperPlat Discord"><svg class="ic ic--discord" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.545 2.907a13.2 13.2 0 0 0-3.257-1.011.05.05 0 0 0-.052.025c-.141.25-.297.577-.406.833a12.2 12.2 0 0 0-3.658 0 8 8 0 0 0-.412-.833.05.05 0 0 0-.052-.025c-1.125.194-2.22.534-3.257 1.011a.04.04 0 0 0-.021.018C.356 6.024-.213 9.047.066 12.032q.003.022.021.037a13.3 13.3 0 0 0 3.995 2.02.05.05 0 0 0 .056-.019q.463-.63.818-1.329a.05.05 0 0 0-.01-.059l-.018-.011a9 9 0 0 1-1.248-.595.05.05 0 0 1-.02-.066l.015-.019q.127-.095.248-.195a.05.05 0 0 1 .051-.007c2.619 1.196 5.454 1.196 8.041 0a.05.05 0 0 1 .053.007q.121.1.248.195a.05.05 0 0 1-.004.085 8 8 0 0 1-1.249.594.05.05 0 0 0-.03.03.05.05 0 0 0 .003.041c.24.465.515.909.817 1.329a.05.05 0 0 0 .056.019 13.2 13.2 0 0 0 4.001-2.02.05.05 0 0 0 .021-.037c.334-3.451-.559-6.449-2.366-9.106a.03.03 0 0 0-.02-.019m-8.198 7.307c-.789 0-1.438-.724-1.438-1.612s.637-1.613 1.438-1.613c.807 0 1.45.73 1.438 1.613 0 .888-.637 1.612-1.438 1.612m5.316 0c-.788 0-1.438-.724-1.438-1.612s.637-1.613 1.438-1.613c.807 0 1.451.73 1.438 1.613 0 .888-.631 1.612-1.438 1.612"/></svg></a>
+        <a class="footer__sns-a" href="https://www.youtube.com/@SuperPlat.official" target="_blank" rel="noopener noreferrer" aria-label="SuperPlat YouTube"><svg class="ic ic--youtube" viewBox="0 0 16 16" aria-hidden="true"><path d="M8.051 1.999h.089c.822.003 4.987.033 6.11.335a2.01 2.01 0 0 1 1.415 1.42c.101.38.172.883.22 1.402l.1.104.022.26.008.104c.065.914.073 1.77.074 1.957v.075c-.001.194-.01 1.108-.082 2.06l-.008.105-.009.104c-.05.572-.124 1.14-.235 1.558a2.01 2.01 0 0 1-1.415 1.42c-1.16.312-5.569.334-6.18.335h-.142c-.309 0-1.587-.006-2.927-.052l-.17-.006-.087-.004-.171-.007-.171-.007c-1.11-.049-2.167-.128-2.654-.26a2.01 2.01 0 0 1-1.415-1.419c-.111-.417-.185-.986-.235-1.558L.09 9.82l-.008-.104A31 31 0 0 1 0 7.68v-.123c.002-.215.01-.958.064-1.778l.007-.103.003-.052.008-.104.022-.26.01-.104c.048-.519.119-1.023.22-1.402a2.01 2.01 0 0 1 1.415-1.42c.487-.13 1.544-.21 2.654-.26l.17-.007.172-.006.086-.003.171-.007A100 100 0 0 1 7.858 2zM6.4 5.209v4.818l4.157-2.408z"/></svg></a>
+        <a class="footer__sns-a" href="https://www.instagram.com/superplat.official/" target="_blank" rel="noopener noreferrer" aria-label="SuperPlat Instagram"><svg class="ic ic--instagram" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.9 3.9 0 0 0-1.417.923A3.9 3.9 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.9 3.9 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.9 3.9 0 0 0-.923-1.417A3.9 3.9 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 7.998 0zm-.717 1.442h.718c2.136 0 2.389.007 3.232.046.78.035 1.204.166 1.486.275.373.145.64.319.92.599s.453.546.598.919c.11.281.24.705.275 1.485.039.843.047 1.096.047 3.231s-.008 2.389-.047 3.232c-.035.78-.166 1.203-.275 1.485a2.5 2.5 0 0 1-.599.919c-.28.28-.546.453-.92.598-.28.11-.704.24-1.485.276-.843.038-1.096.047-3.232.047s-2.39-.009-3.233-.047c-.78-.036-1.203-.166-1.485-.276a2.5 2.5 0 0 1-.92-.598 2.5 2.5 0 0 1-.6-.92c-.109-.281-.24-.705-.275-1.485-.038-.843-.046-1.096-.046-3.233s.008-2.388.046-3.231c.036-.78.166-1.204.276-1.486.145-.373.319-.64.599-.92s.546-.453.92-.598c.282-.11.705-.24 1.485-.276.738-.034 1.024-.044 2.515-.045zm4.988 1.328a.96.96 0 1 0 0 1.92.96.96 0 0 0 0-1.92M8 3.892a4.108 4.108 0 1 0 0 8.217 4.108 4.108 0 0 0 0-8.217M8 5.334a2.666 2.666 0 1 1 0 5.333 2.666 2.666 0 0 1 0-5.333"/></svg></a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- 페일세이프 — 메인 스크립트가 죽어도 3.5초 뒤 히어로가 완성 상태로 보입니다 -->
+<script>setTimeout(function(){document.documentElement.classList.add('is-ready')},3500)</script>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   SuperPlat HOME — interaction
+   ⚠️ 이 스크립트가 통째로 실패해도 페이지는 정적으로 정상입니다.
+      (인트로는 위의 페일세이프가 3.5초 뒤 .is-ready 를 붙입니다)
+   ══════════════════════════════════════════════════════════════════ */
+(function () {
+'use strict';
+
+var root = document.documentElement;
+var reduceMQ = matchMedia('(prefers-reduced-motion: reduce)');
+var hoverMQ  = matchMedia('(hover: hover) and (pointer: fine)');
+var reduce   = reduceMQ.matches;
+var $  = function (s, c) { return (c || document).querySelector(s); };
+var $$ = function (s, c) { return [].slice.call((c || document).querySelectorAll(s)); };
+var clamp = function (v, a, b) { return v < a ? a : v > b ? b : v; };
+
+/* ── 1. DATA ──────────────────────────────────────────────────────
+   ✏️ 이미지 교체는 이 두 배열만 고치면 됩니다. JSX/DOM 하드코딩 없음.        */
+
+/* ratio 는 "원본 비율" 그대로입니다 — 카드가 이 비율의 박스를 만들고
+   img 는 object-fit:contain 이라 잘림도, 남는 여백도 생기지 않습니다.
+     portrait  415:604   square 1:1   landscape 604:375   wide 335:232
+   ⚠️ 새로 교체된 4장(cow · crowd · band · robots)은 335×232 라서 'square' 가
+      아니라 'wide' 입니다. 예전 값을 그대로 두면 위아래에 빈 띠가 생깁니다. */
+var CHARACTERS = [
+  { src:'char-cat.png',       ratio:'square',    alt:'노란 배경 위의 주황색 고양이 캐릭터' },
+  { src:'char-sprouts.png',   ratio:'landscape', alt:'우주복을 입은 캐릭터와 새싹 친구들' },
+  { src:'char-polarbear.png', ratio:'portrait',  alt:'아이스크림 모자를 쓴 북극곰 캐릭터' },
+  { src:'char-cow.png',       ratio:'wide',      pos:'center 34%', alt:'KU 스카프를 두른 소와 고양이 캐릭터' },
+  { src:'char-duck.png',      ratio:'portrait',  alt:'빨간 안경을 얹은 오리 캐릭터' },
+  { src:'char-duo.png',       ratio:'square',    alt:'빨간 머리 캐릭터와 컬러풀한 친구' },
+  { src:'char-suit.png',      ratio:'portrait',  alt:'정장을 입은 캐릭터' },
+  { src:'char-monsters.png',  ratio:'landscape', alt:'보라색 몬스터 캐릭터들' },
+  { src:'char-pink.png',      ratio:'portrait',  alt:'분홍 망토를 두른 캐릭터' },
+  { src:'char-crowd.png',     ratio:'wide',      pos:'center 42%', alt:'여러 캐릭터가 모여 있는 모습' },
+  { src:'char-blob.png',      ratio:'portrait',  alt:'민트색 블롭 캐릭터' },
+  { src:'char-band.png',      ratio:'wide',      alt:'무대 의상을 입은 캐릭터 그룹' },
+  { src:'char-puppy.png',     ratio:'portrait',  alt:'민트색 강아지 캐릭터' },
+  { src:'char-robots.png',    ratio:'wide',      pos:'center 40%', alt:'레드·오렌지 로봇 캐릭터들' }
+];
+
+/* SuperPlat 공간 — 첨부 리소스 전부 등록 (16:9)
+   ✏️ 원본 파일이 추가되면 아래 배열에 한 줄만 더하면 됩니다.
+      아직 이미지가 없는 공간: SuperTown / Cafe / In the Sky / VOD Space */
+/* ── 공간 데이터는 assets/sp-worlds.js 하나만 봅니다 ─────────────────
+   WORLD & IP 페이지의 월드 카드도 같은 배열을 씁니다. 그래서 이름 · 이미지 ·
+   설명 · 순서가 두 화면에서 갈라질 수 없습니다(Single Source of Truth).
+   공간을 추가/수정하려면 이 파일이 아니라 sp-worlds.js 를 고치세요.
+
+   여기서는 캐러셀이 쓰던 필드명(title / desc / img)으로 이름만 바꿔 담습니다 —
+   렌더 코드를 건드리지 않기 위해서입니다.
+     · fam    = 배경 Semantic Color Family (사진에서 추출한 값이 아니라 지정 매핑)
+     · 영문 설명은 공용 사전(sp-i18n.js)이 국문 원문을 키로 찾아 줍니다.
+     · 이미지가 아직 없는 공간(pending)은 .ready() 가 걸러 내므로
+       깨진 이미지가 생기지 않습니다.                                        */
+var WORLDS = (window.SPWorlds ? window.SPWorlds.ready() : []).map(function (s) {
+  return { id:s.id, fam:s.fam, title:s.name, desc:s.ko, img:'assets/' + s.img };
+});
+
+
+/* ── 2. i18n ─────────────────────────────────────────────────────── */
+var EN = {
+  nav1:'About', nav2:'World & IP', nav3:'News', nav4:'Support',
+  download:'Download', login:'Log in', explore:'Explore worlds',
+  terms:'Terms', privacy:'Privacy',
+  h1a:'From a world you watched alone', h1b:'to a world you play in together',
+  sc1a:'Your own space', sc1b:'becomes a gallery',
+  sc2a:'an imagination', sc2b:'and a campus',
+  s02a:'Say hello to the character', s02b:'you have always liked!',
+  s02c:'The character you wanted to meet is standing in the same space.',
+  s02d:'Anything works — how your day went, or a question that just came up.',
+  s03a:'Where should we', s03b:'go first today?',
+  s03c:'Walk through an exhibition, enjoy a show,',
+  s03d:'and head for the place where everyone gathers.',
+  s03e:'There is no set route. Wander wherever you feel like going.',
+  s04a:'Walk alone if you like,', s04b:'or walk together.',
+  s05a1:'Other people are here,', s05a2:'in the very same space.',
+  s05b:'Bring a friend and look around',
+  s05c:'Meet the friends you made in SuperPlat,', s05d:'the ones who share what you love!',
+  s05e:'Join the events happening now',
+  s05f:'Quiz shows, live events, movie nights —', s05g:'take part with the residents of SuperTown.',
+  ctaa:'The door is open.', ctab:'Come in right now!', ctac:'Go to download'
+};
+var KO = {};
+$$('[data-i18n]').forEach(function (el) { KO[el.dataset.i18n] = el.innerHTML; });
+
+function setLang(lang) {
+  var dict = lang === 'en' ? EN : KO;
+  /* 언어는 사이트 공용 상태입니다 — 저장 · <html lang> · 구독자 통지까지 담당합니다
+     (assets/sp-i18n.js · localStorage['sp.locale']). 페이지를 옮겨도 유지됩니다. */
+  if (window.SPI18N) window.SPI18N.set(lang);
+  $$('[data-i18n]').forEach(function (el) {
+    var v = dict[el.dataset.i18n];
+    if (v != null) el.innerHTML = v;
+  });
+  root.lang = lang === 'en' ? 'en' : 'ko';
+  $$('[data-lang]').forEach(function (b) { b.setAttribute('aria-current', String(b.dataset.lang === lang)); });
+  if (window.__worldsRender) window.__worldsRender(true);
+  /* Hero 좌우 카피는 어절 단위로 쪼개 두었는데 innerHTML 을 갈아끼웠으니 다시 쪼갭니다 */
+  if (window.__sheroSplit) window.__sheroSplit();
+}
+$$('[data-lang]').forEach(function (b) {
+  b.addEventListener('click', function () { setLang(b.dataset.lang); closeLang(); });
+});
+/* 저장된 언어를 첫 렌더 전에 적용합니다. <html lang> 은 sp-i18n.js 가 이미
+   확정해 두었으므로, 여기서는 헤더/드로어의 data-i18n 문자열만 맞춥니다. */
+if (window.SPI18N && window.SPI18N.get() === 'en') setLang('en');
+
+/* ── 3. HEADER ───────────────────────────────────────────────────── */
+var header = $('#header'), burger = $('#burger'), drawer = $('#drawer');
+var lang = $('#lang'), langBtn = $('#langBtn');
+
+var ticking = false;
+function onScroll() {
+  if (ticking) return;
+  ticking = true;
+  requestAnimationFrame(function () {
+    /* Hero sticky sequence 가 있는 페이지에서는 헤더 테마를 Hero 가 직접 잡습니다
+       (흰 배경이 드러나는 순간에 맞춰 전환해야 하므로 scrollY 임계값으로는 부족) */
+    if (!heroOwnsHeader) header.classList.toggle('is-scrolled', window.scrollY > 40);
+    ticking = false;
+  });
+}
+addEventListener('scroll', onScroll, { passive: true });
+onScroll();
+
+function closeLang() { lang.classList.remove('is-open'); langBtn.setAttribute('aria-expanded', 'false'); }
+langBtn.addEventListener('click', function (e) {
+  e.stopPropagation();
+  var open = lang.classList.toggle('is-open');
+  langBtn.setAttribute('aria-expanded', String(open));
+});
+document.addEventListener('click', function (e) { if (!lang.contains(e.target)) closeLang(); });
+
+var scrollY = 0;
+function setMenu(open) {
+  root.classList.toggle('is-menu', open);
+  burger.setAttribute('aria-expanded', String(open));
+  burger.setAttribute('aria-label', open ? '메뉴 닫기' : '메뉴 열기');
+  if (open) { drawer.removeAttribute('inert'); } else { drawer.setAttribute('inert', ''); }
+  /* body scroll lock — iOS 포함 */
+  if (open) {
+    scrollY = window.scrollY;
+    document.body.style.top = -scrollY + 'px';
+    document.body.classList.add('is-locked');
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+  } else {
+    document.body.classList.remove('is-locked');
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.width = '';
+    window.scrollTo(0, scrollY);
+  }
+}
+burger.addEventListener('click', function () { setMenu(!root.classList.contains('is-menu')); });
+$$('a', drawer).forEach(function (a) { a.addEventListener('click', function () { setMenu(false); }); });
+addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') { setMenu(false); closeLang(); }
+});
+matchMedia('(min-width:992px)').addEventListener('change', function (e) { if (e.matches) setMenu(false); });
+
+/* ── 4. REVEAL ───────────────────────────────────────────────────── */
+/* 관찰 대상 — 헤드라인(.section-head) · 본문/카드(.reveal) · 큰 비주얼(.rv-img) 뿐.
+   장식 요소는 의도적으로 정지 상태로 둡니다(§scroll rhythm). */
+var revealItems = $$('.reveal, .section-head, .marquee, .rv-img, .cta__art');
+if ('IntersectionObserver' in window && !reduce) {
+  var io = new IntersectionObserver(function (es) {
+    es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); } });
+  }, { rootMargin: '0px 0px -14% 0px', threshold: .12 });
+  revealItems.forEach(function (el) { io.observe(el); });
+} else {
+  revealItems.forEach(function (el) { el.classList.add('is-in'); });
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   5. HERO — ONE STICKY HERO + SCROLL PROGRESS
+   ──────────────────────────────────────────────────────────────────
+   track(약 420svh) 안에서 stage 가 sticky 로 붙어 있고,
+   progress(0~1) 하나가 아래 값을 전부 "보간"합니다.
+
+     0.00 ~ 0.16   Scene 01 — full bleed hold
+     0.14 ~ 0.26   Scene 01 카피 exit (이미지가 줄기 전에 먼저 정리)
+     0.16 ~ 0.40   full bleed → 360 정사각 + radius 0 → 72 morph
+     0.33 ~ 0.45   좌우 카피 ① entrance
+     0.34 ~ 0.44   이미지 ① → ② crossfade (같은 frame 안에서 visual 만)
+     0.45 ~ 0.57   Scene 02 hold
+     0.55 ~ 0.63   카피 ① exit  (위로)
+     0.57 ~ 0.68   이미지 ② → ③ crossfade
+     0.64 ~ 0.76   카피 ② entrance
+     0.76 ~ 1.00   Scene 03 hold → sticky release
+
+   ⚠️ 전부 progress 의 순수 함수입니다. 되감으면 그대로 역재생됩니다.
+      (일회성 IntersectionObserver / .classList 토글 애니메이션 아님)
+   ══════════════════════════════════════════════════════════════════ */
+var heroOwnsHeader = false;
+
+(function () {
+  var sec   = $('#hero');
+  var track = $('#sheroTrack');
+  var stage = $('#sheroStage');
+  var frame = $('#sheroFrame');
+  var lead  = $('#sheroLead');
+  var scrim = $('#sheroScrim');
+  var cue   = $('#sheroCue');
+  var stat  = $('#sheroStatic');
+  if (!sec || !track || !stage || !frame) return;
+
+  var imgs = [].slice.call(sec.querySelectorAll('.shero__stage .shero__img'));
+  var rows = [].slice.call(sec.querySelectorAll('.shero__copy .shero__row'));
+
+  /* 어절 분리 — [나만의] [공간이] 처럼 마스크 안에서 하나씩 올라오게 만듭니다.
+     ⚠️ 언어를 바꾸면 setLang 이 innerHTML 을 통째로 갈아끼우므로, 그때 다시 부릅니다
+        (setLang 끝에서 window.__sheroSplit 을 호출합니다). */
+  function splitWords(side) {
+    var host = side.querySelector('[data-i18n]') || side;
+    var txt = (host.textContent || '').trim();
+    if (!txt) return [];
+    host.textContent = '';
+    return txt.split(/\s+/).map(function (word, i, arr) {
+      var w = document.createElement('span'); w.className = 'w';
+      var inner = document.createElement('i'); inner.textContent = word;
+      w.appendChild(inner); host.appendChild(w);
+      if (i !== arr.length - 1) host.appendChild(document.createTextNode(' '));
+      return inner;
+    });
+  }
+  var sides = [];
+  function buildSides() {
+    sides = rows.map(function (r) {
+      var l = r.querySelector('.shero__side--l');
+      var rr = r.querySelector('.shero__side--r');
+      return { l: l, r: rr, lw: splitWords(l), rw: splitWords(rr) };
+    });
+  }
+  buildSides();
+  window.__sheroSplit = function () { buildSides(); onScrollHero(); };
+
+  /* ── 인트로 — 첫 이미지가 디코드된 뒤에만 시작 (흰 플래시 / 반쪽 렌더 방지) */
+  (function intro() {
+    var ready = imgs[0] && imgs[0].decode
+      ? imgs[0].decode().catch(function () {})
+      : Promise.resolve();
+    Promise.race([ready, new Promise(function (r) { setTimeout(r, 1800); })])
+      .then(function () { requestAnimationFrame(function () { root.classList.add('is-ready'); }); });
+  })();
+
+  /* ── prefers-reduced-motion — scrub 을 걷어내고 정적 시퀀스로 */
+  if (reduce) {
+    sec.classList.add('is-static');
+    if (stat) stat.hidden = false;
+    if (cue) cue.style.setProperty('--cue', '1');
+    heroOwnsHeader = false;
+    return;
+  }
+
+  /* ── 구간 정의 (§18) ─────────────────────────────────────────── */
+  /* ⚠️ 한 번에 같이 움직이는 것이 없습니다. 아주 짧은 시간차(temporal hierarchy)를
+     두어 사용자가 문장을 "읽는" 순서대로 화면이 바뀌게 합니다.
+
+       Headline exit → Image morph → Image settle → LEFT → RIGHT
+       LEFT exit → RIGHT exit → Image transition → new LEFT → new RIGHT          */
+  var SEG = {
+    lead:   [0.09, 0.20],   /* ① Scene 01 카피가 "먼저" 정리됩니다 */
+    shrink: [0.19, 0.38],   /* ② 그 다음에야 이미지가 본격적으로 morph */
+    swapA:  [0.33, 0.41],   /*    이미지 ① → ② */
+    in1L:   [0.35, 0.44],   /* ③ LEFT  "나만의 공간이" */
+    in1R:   [0.395, 0.485], /* ④ RIGHT — LEFT 가 ~60% 나타난 뒤 시작 */
+    /*      0.485 ~ 0.60    Scene 02 HOLD */
+    out1L:  [0.60, 0.655],  /* ⑤ LEFT exit 먼저 */
+    out1R:  [0.62, 0.675],  /* ⑥ RIGHT exit */
+    swapB:  [0.65, 0.735],  /* ⑦ 이미지 ② → ③ */
+    in2L:   [0.735, 0.825], /* ⑧ 새 LEFT  "상상이 되고" */
+    in2R:   [0.775, 0.865]  /* ⑨ 새 RIGHT "캠퍼스가 되는곳" */
+    /*      0.865 ~ 1.00    Scene 03 HOLD → sticky release */
+  };
+  /* 어절 사이 간격 — progress 기준. 보통 스크롤 속도에서 60~80ms 정도로 읽힙니다 */
+  var WORD_STEP = 0.012;
+
+  /* 값이 그대로면 쓰지 않습니다 — 불필요한 style invalidation 제거 */
+  function setVar(el, k, v) {
+    if (!el.__v_) el.__v_ = {};
+    if (el.__v_[k] === v) return;
+    el.__v_[k] = v;
+    el.style.setProperty(k, v);
+  }
+  function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
+  function seg(p, s) { return clamp01((p - s[0]) / (s[1] - s[0])); }
+  /* smoothstep — overshoot / bounce 가 없는 ease-in-out */
+  function ease(t) { return t * t * (3 - 2 * t); }
+
+  /* 카드 최종 크기 / radius 는 CSS 토큰에서 읽습니다 (반응형 한 곳에서 관리) */
+  var probe = $('#sheroProbe');
+  function tokens() {
+    /* --card 에는 min() 이 들어 있어 문자열 파싱이 안 됩니다 —
+       probe 의 실제 렌더 폭을 읽어야 모바일에서도 정확합니다. */
+    var card = probe ? probe.getBoundingClientRect().width : 0;
+    var r = parseFloat(getComputedStyle(sec).getPropertyValue('--cardr'));
+    if (!card) card = 360;
+    if (!r || isNaN(r)) r = 72;
+    /* grid track 이 쓸 수 있게 실제 픽셀값으로 다시 내보냅니다 */
+    sec.style.setProperty('--cardpx', Math.round(card) + 'px');
+    return { card: card, r: r };
+  }
+  var TOK = tokens();
+
+  var W = 0, H = 0, SPAN = 0;
+  function measure() {
+    W = stage.clientWidth;
+    H = stage.clientHeight;
+    SPAN = track.offsetHeight - stage.offsetHeight;
+    TOK = tokens();
+  }
+
+  function progress() {
+    if (SPAN <= 0) return 0;
+    return clamp01(-track.getBoundingClientRect().top / SPAN);
+  }
+
+  var lastDark = null;
+
+  function paint(p) {
+    /* ① frame morph — container 크기를 직접 보간합니다.
+          transform:scale 이 아니라서 이미지 내부 crop 도 자연스럽게 따라옵니다. */
+    var t  = ease(seg(p, SEG.shrink));
+    var w  = W + (TOK.card - W) * t;
+    var h  = H + (TOK.card - H) * t;
+    var r  = TOK.r * t;
+    setVar(frame, '--fw', w.toFixed(1) + 'px');
+    setVar(frame, '--fh', h.toFixed(1) + 'px');
+    setVar(frame, '--fr', r.toFixed(1) + 'px');
+
+    /* ② Scene 01 카피 exit — 이미지가 충분히 줄기 전에 먼저 정리 */
+    var lo = ease(seg(p, SEG.lead));
+    setVar(lead, '--lo', (1 - lo).toFixed(3));
+    setVar(lead, '--ly', (-24 * lo).toFixed(1) + 'px');
+    setVar(lead, '--lb', (2 * lo).toFixed(2) + 'px');
+    if (scrim) setVar(scrim, '--scrim', (1 - lo).toFixed(3));
+    if (cue) setVar(cue, '--cue', (1 - ease(seg(p, [0, 0.07]))).toFixed(3));
+
+    /* ③ 이미지 crossfade — frame 은 그대로, visual 만 교체 */
+    var a = ease(seg(p, SEG.swapA));
+    var b = ease(seg(p, SEG.swapB));
+    setImg(imgs[0], 1 - a,        1,     a);
+    setImg(imgs[1], a * (1 - b),  a,     b);
+    setImg(imgs[2], b,            b,     0);
+
+    /* ④ 좌우 카피 — LEFT 가 먼저, RIGHT 가 이어서. 나갈 때도 LEFT 가 먼저. */
+    setSide(sides[0].l, sides[0].lw, p, SEG.in1L, SEG.out1L, -1);
+    setSide(sides[0].r, sides[0].rw, p, SEG.in1R, SEG.out1R,  1);
+    setSide(sides[1].l, sides[1].lw, p, SEG.in2L, null,       -1);
+    setSide(sides[1].r, sides[1].rw, p, SEG.in2R, null,        1);
+
+    /* ⑤ Header theme — 프레임 상단이 헤더에서 떨어져 흰 배경이 드러나는 시점.
+          임계값을 progress 로 잡으면 뷰포트 높이에 따라 어긋나므로 기하로 계산합니다. */
+    var dark = (H - h) / 2 > 20;
+    if (dark !== lastDark) {
+      lastDark = dark;
+      header.classList.toggle('is-scrolled', dark);
+    }
+  }
+
+  /* enter: 0~1 등장 / exit: 0~1 퇴장.
+     scale 은 §12 대로 나가는 쪽 1 → 1.015, 들어오는 쪽 .985 → 1 */
+  function setImg(el, op, enter, exit) {
+    if (!el) return;
+    var o = op.toFixed(3);
+    if (el.__o !== o) { el.__o = o; el.style.opacity = o; }
+    /* 완전히 투명한 이미지는 아예 그리지 않습니다 — 매 프레임 3장을 리샘플하지 않도록 */
+    var vis = op < 0.004 ? 'hidden' : '';
+    if (el.__v !== vis) { el.__v = vis; el.style.visibility = vis; }
+    if (!vis) {
+      var sc = (0.985 + 0.015 * enter + 0.015 * exit).toFixed(4);
+      if (el.__s !== sc) { el.__s = sc; el.style.setProperty('--is', sc); }
+    }
+  }
+
+  /* 한 덩어리로 밀려 들어오지 않고, 어절이 마스크 안에서 차례로 올라옵니다.
+     - 문장 전체 : 가로로 아주 짧게(±12px) 다가오고, 나갈 때는 위로(−20px)
+     - 어절 각각 : 아래(32px)에서 위로 reveal + 순차 fade
+     모바일은 가로 이동 없이 세로 reading motion 으로만 읽힙니다. */
+  /* 모바일/태블릿은 세로로 쌓이므로 가로 이동을 쓰지 않습니다 (§14) */
+  var mqStack = matchMedia('(max-width: 1023px)');
+  var sideDX = mqStack.matches ? 0 : 12;
+  function syncDX() { sideDX = mqStack.matches ? 0 : 12; }
+  if (mqStack.addEventListener) mqStack.addEventListener('change', function () { syncDX(); onScrollHero(); });
+  function setSide(el, words, p, inSeg, outSeg, dir) {
+    if (!el) return;
+    var n = words.length || 1;
+    var exit = outSeg ? ease(seg(p, outSeg)) : 0;
+    /* 문장 단위 진행도 = 마지막 어절 기준 (가로 이동·exit 에 사용) */
+    var lead = seg(p, [inSeg[0], inSeg[1] + WORD_STEP * (n - 1)]);
+    var tx = dir * sideDX * (1 - ease(lead));
+    var ty = -20 * exit;
+    setVar(el, '--sx', tx.toFixed(1) + 'px');
+    setVar(el, '--sy', ty.toFixed(1) + 'px');
+    var op = (1 - exit).toFixed(3);
+    if (el.__o !== op) { el.__o = op; el.style.opacity = op; }
+    for (var i = 0; i < words.length; i++) {
+      var e = ease(seg(p, [inSeg[0] + WORD_STEP * i, inSeg[1] + WORD_STEP * i]));
+      var w = words[i];
+      var wy = (32 * (1 - e)).toFixed(1);
+      if (w.__y !== wy) { w.__y = wy; w.style.transform = 'translate3d(0,' + wy + 'px,0)'; }
+      var wo = e.toFixed(3);
+      if (w.__o !== wo) { w.__o = wo; w.style.opacity = wo; }
+    }
+  }
+
+  /* ── 스크롤 루프 — rAF 한 번에 한 프레임만 (scroll 마다 레이아웃 읽지 않음) */
+  var queued = false;
+  function tick() {
+    queued = false;
+    paint(progress());
+  }
+  function onScrollHero() {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(tick);
+  }
+
+  /* 모바일 주소창 높이 변화(dvh 흔들림)로 매번 다시 계산하지 않도록
+     실제 폭이 바뀐 경우에만 measure 합니다 — iOS Safari viewport jump 방지 */
+  var lastW = innerWidth;
+  function onResize() {
+    if (innerWidth === lastW) { measure(); onScrollHero(); return; }
+    lastW = innerWidth;
+    measure();
+    onScrollHero();
+  }
+
+  heroOwnsHeader = true;
+  measure();
+  paint(progress());
+  addEventListener('scroll', onScrollHero, { passive: true });
+  addEventListener('resize', onResize);
+  addEventListener('orientationchange', function () { setTimeout(onResize, 260); });
+  if (window.ResizeObserver) new ResizeObserver(function () { measure(); onScrollHero(); }).observe(track);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { measure(); onScrollHero(); });
+})();
+
+/* ══════════════════════════════════════════════════════════════════
+   6. CHARACTER RAIL — 이음매 없는 무한 marquee, hover 시 부드럽게 감속
+   ══════════════════════════════════════════════════════════════════ */
+(function () {
+  var wrapEl = $('#marquee'), track = $('#marqueeTrack');
+  if (!track) return;
+
+  function card(c, i, clone) {
+    var a = document.createElement('div');
+    a.className = 'marquee__card';
+    a.style.setProperty('--i', String(Math.min(i, 7)));
+    var img = document.createElement('img');
+    img.src = 'assets/' + c.src;
+    a.dataset.ratio = c.ratio;
+    /* 슬롯 비율과 원본 비율이 다른 카드만 보여줄 위치를 따로 정합니다 */
+    if (c.pos) img.style.objectPosition = c.pos;
+    img.width = 604; img.height = 604;
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    img.draggable = false;
+    if (clone) { a.setAttribute('aria-hidden', 'true'); img.alt = ''; }
+    else { img.alt = c.alt; }
+    a.appendChild(img);
+    return a;
+  }
+  var setEls = CHARACTERS.map(function (c, i) { return card(c, i, false); });
+  setEls.forEach(function (el) { track.appendChild(el); });
+
+  var setW = 0, x = 0, speed = 0, target = 0, raf = null;
+  var LOOP_SEC = 42;                 /* 한 바퀴 42초 */
+  var BASE = 60;                     /* measure() 에서 setW 기준으로 다시 계산됩니다 */
+  var DECAY = .075;                  /* ≈500ms 안에 감속/복귀 */
+
+  function measure() {
+    setW = 0;
+    setEls.forEach(function (el) { setW += el.offsetWidth; });
+    var gap = parseFloat(getComputedStyle(track).columnGap || '16') || 16;
+    setW += gap * CHARACTERS.length;
+    BASE = clamp(setW / LOOP_SEC, 40, 130);
+    if (target > 0) target = BASE;
+    while (track.scrollWidth < setW + innerWidth * 1.3 && track.children.length < CHARACTERS.length * 6) {
+      CHARACTERS.forEach(function (c, i) { track.appendChild(card(c, i, true)); });
+    }
+  }
+  function frame(now) {
+    if (!frame.t) frame.t = now;
+    var dt = Math.min(now - frame.t, 64) / 1000; frame.t = now;
+    speed += (target - speed) * DECAY;            /* 급정지 없이 velocity 만 서서히 */
+    x -= speed * dt;
+    if (setW && x <= -setW) x += setW;
+    track.style.transform = 'translate3d(' + x.toFixed(2) + 'px,0,0)';
+    raf = requestAnimationFrame(frame);
+  }
+
+  measure();
+  addEventListener('resize', function () { measure(); }, { passive: true });
+
+  if (!reduce) {
+    target = BASE;
+    raf = requestAnimationFrame(frame);
+    wrapEl.addEventListener('pointerenter', function () { target = BASE * .08; });
+    wrapEl.addEventListener('pointerleave', function () { target = BASE; });
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) { cancelAnimationFrame(raf); raf = null; frame.t = 0; }
+      else if (!raf) raf = requestAnimationFrame(frame);
+    });
+  }
+
+})();
+
+/* ══════════════════════════════════════════════════════════════════
+   7. WORLD CAROUSEL — data-driven, transform 기반 infinite loop
+   ──────────────────────────────────────────────────────────────────
+   · display:none / 이미지 교체 없이, 각 슬라이드의 '현재 offset' 만 다시 계산해
+     transform + opacity 로 이동시킵니다 (깜빡임 없음).
+   · offset 은 순환 최단거리로 remapping 하므로 첫↔마지막이 자연스럽게 이어집니다.
+   ══════════════════════════════════════════════════════════════════ */
+(function () {
+  var stage = $('#wStage'), vp = $('#wViewport');
+  if (!stage) return;
+  var nameEl = $('#wName'), descEl = $('#wDesc'), capEl = $('#wCaption');
+  var idxEl = $('#wIndex'), barEl = $('#wBar'), totEl = $('#wTotal');
+  var N = WORLDS.length;
+  var active = 0, prevOffsets = [], step = 0, slideW = 0;
+  var AUTOPLAY = 6000, autoT = null, resumeT = null;
+
+  totEl.textContent = String(N).padStart(2, '0');
+
+  var slides = WORLDS.map(function (w, i) {
+    var el = document.createElement('div');
+    el.className = 'slide';
+    el.setAttribute('role', 'group');
+    el.setAttribute('aria-roledescription', 'slide');
+    el.setAttribute('aria-label', (i + 1) + ' / ' + N + ' · ' + w.title);
+    var inner = document.createElement('div');
+    inner.className = 'slide__inner';
+    var img = document.createElement('img');
+    img.src = w.img;
+    img.alt = w.title + ' — ' + w.desc;
+    img.width = 1600; img.height = 900;
+    img.decoding = 'async';
+    img.draggable = false;   /* ⚠️ 없으면 네이티브 이미지 드래그가 pointercancel 을 던져 스와이프가 죽습니다 */
+    /* 첫 장은 eager, 다음 2장은 preload, 나머지는 lazy */
+    if (i === 0) { img.loading = 'eager'; img.fetchPriority = 'high'; }
+    else if (i <= 2 || i === N - 1) { img.loading = 'eager'; }
+    else { img.loading = 'lazy'; }
+    inner.appendChild(img);
+    /* DIM 레이어 — 이미지와 같은 부모(overflow:hidden + radius) 안이라
+       모서리가 언제나 정확히 일치합니다 */
+    var dim = document.createElement('span');
+    dim.className = 'slide__dim';
+    dim.setAttribute('aria-hidden', 'true');
+    inner.appendChild(dim);
+    el.appendChild(inner);
+    /* ⚠️ 카드별 click 리스너를 쓰지 않습니다.
+       드래그를 위해 stage 에 setPointerCapture 를 걸기 때문에, 브라우저가
+       click 이벤트를 stage 로 retarget 합니다(실측: click.target = .worlds__stage).
+       그래서 썸네일 클릭이 아무 반응도 하지 않았습니다 — release() 에서
+       포인터 좌표로 직접 판정합니다. */
+    vp.appendChild(el);
+    w.el = el; w.img_ = img;
+    return el;
+  });
+
+  var isMobile = function () { return innerWidth <= 767; };
+  /* 중앙에서 멀어질수록 작고 옅게 — small → medium → LARGE → medium → small */
+  /* 두 번째(offset ±1) · 세 번째(offset ±2) 카드는 투명도 없이 100% 로 보여 줍니다.
+     크기 리듬(s)은 그대로 두고 o 만 1 로 올렸습니다.
+     네 번째(±3)는 화면 밖에서 들고 나는 자리라 0 을 유지합니다 — 여기까지 1 로 두면
+     카드가 화면 가장자리에서 뚝 끊기며 사라집니다. */
+  /* s = 크기 · o = 불투명도 · d = 검정 DIM
+     중앙 0% → 바로 옆 20% → 바깥 40% 로 중심에서 멀어질수록 뒤로 물러납니다. */
+  var TIER   = [{ s: 1, o: 1, d: 0 }, { s: .76, o: 1, d: .30 }, { s: .66, o: 1, d: .40 }, { s: .60, o: 0, d: .40 }];
+  /* 모바일은 카드가 커서 40% 가 과하게 어두워 보입니다 — 바깥을 38% 로 */
+  var TIER_M = [{ s: 1, o: 1, d: 0 }, { s: .92, o: 1, d: .30 }, { s: .86, o: 1, d: .38 }, { s: .82, o: 0, d: .38 }];
+  var POS = [0, 0, 0, 0];          /* offset 별 중심 좌표 (px) */
+
+  function measure() {
+    slideW = slides[0].offsetWidth || 1;
+    var V = stage.clientWidth, T = isMobile() ? TIER : TIER;
+    if (isMobile()) {
+      /* 모바일 — [partial prev][ACTIVE][partial next].
+         카드 사이 '실제 여백'을 12px 로 고정해 촘촘하게 이어지도록 계산합니다. */
+      var g = Math.round((V - slideW) / 2);      /* 좌우 여백 = 남는 폭의 절반 (시안 20px) */
+      vp.style.left = (g + slideW / 2) + 'px';
+      /* 카드 사이 '실제 여백' — 촘촘하게, 화면이 커지면 살짝만 벌어집니다 */
+      /* 카드 사이 실제 여백 — PC 값을 축소해 쓰지 않고 모바일 전용으로 잡습니다 */
+      var mg1 = innerWidth >= 400 ? 20 : 16, mg2 = mg1;
+      var m1 = slideW / 2 + mg1 + slideW * TIER_M[1].s / 2;
+      var m2 = m1 + slideW * TIER_M[1].s / 2 + mg2 + slideW * TIER_M[2].s / 2;
+      POS = [0, m1, m2, m2 + slideW * .5];
+      step = m1;
+    } else {
+      vp.style.left = '50%';
+      /* 시안처럼 촘촘하게 — 카드들이 하나의 연속된 showcase 로 읽히도록 */
+      /* 카드가 서로 붙은 한 덩어리가 아니라 각각 독립된 showcase 로 보이도록
+         이전(16~24 / 12~20)보다 약 1.5배 넓혔습니다. @1920 36 / 36 */
+      var g1 = clamp(innerWidth * .01875, 30, 40);  /* 중앙 ↔ 1차 preview */
+      var g2 = clamp(innerWidth * .01875, 30, 40);  /* 1차 ↔ 2차 preview */
+      var p1 = slideW * (.5 + TIER[1].s / 2) + g1;
+      var p2 = p1 + slideW * (TIER[1].s / 2 + TIER[2].s / 2) + g2;
+      /* 2차 preview 가 화면 밖으로 완전히 나가버리면 리듬이 안 보이므로 최소 46px 은 걸치게 */
+      p2 = Math.min(p2, V / 2 + slideW * TIER[2].s / 2 - 46);
+      p2 = Math.max(p2, p1 + slideW * .18);
+      POS = [0, p1, p2, p2 + slideW * .5];
+      step = p1;                                   /* drag 임계값 기준 */
+    }
+  }
+
+  function offsetOf(i) {
+    var d = (i - active + N) % N;
+    return d > N / 2 ? d - N : d;
+  }
+
+  function render(force) {
+    var w, mob = isMobile();
+    for (var i = 0; i < N; i++) {
+      var o = offsetOf(i), el = slides[i], a = Math.abs(o);
+      var jump = prevOffsets[i] === undefined ? true : Math.abs(o - prevOffsets[i]) > 1;
+      if (jump && !force) { el.style.transition = 'none'; }
+      /* small → medium → LARGE → medium → small 리듬 */
+      var T = mob ? TIER_M : TIER, t = T[Math.min(a, 3)];
+      el.classList.toggle('is-live', a <= 3);
+      el.classList.toggle('is-active', o === 0);
+      el.setAttribute('aria-hidden', String(o !== 0));
+      el.style.setProperty('--x', ((o < 0 ? -1 : 1) * POS[Math.min(a, 3)]).toFixed(1));
+      el.style.setProperty('--s', String(t.s));
+      el.style.setProperty('--o', String(t.o));
+      el.style.setProperty('--dim', String(t.d));
+      el.style.zIndex = String(10 - a);
+      if (jump && !force) { void el.offsetWidth; el.style.transition = ''; }
+      prevOffsets[i] = o;
+    }
+    w = WORLDS[active];
+    var en = root.lang === 'en';
+    capEl.classList.add('is-swap');
+    setTimeout(function () {
+      nameEl.textContent = w.title;
+      /* 영문은 공용 사전(sp-i18n.js)이 국문 원문을 키로 찾아 줍니다 —
+         WORLD & IP 카드가 쓰는 경로와 완전히 같아서 두 화면의 문장이 갈라질 수 없습니다.
+         사전에 없으면 국문이 그대로 나갑니다(화면이 비지 않습니다). */
+      descEl.textContent = (en && window.SPI18N) ? window.SPI18N.t(w.desc) : w.desc;
+      capEl.classList.remove('is-swap');
+    }, force ? 0 : 200);
+    idxEl.textContent = String(active + 1).padStart(2, '0');
+    barEl.style.setProperty('--p', ((active + 1) / N).toFixed(4));
+    syncBg(w);                           /* 배경 = 이 공간의 Semantic Color Family */
+    /* 이웃 이미지를 미리 디코드해 이동 시 깜빡임 방지 */
+    [(active + 1) % N, (active - 1 + N) % N].forEach(function (k) {
+      var im = WORLDS[k].img_;
+      if (im && im.decode) im.decode().catch(function () {});
+    });
+  }
+  /* ── 배경 동기화 ────────────────────────────────────────────────
+     click / arrow / keyboard / drag / swipe / autoplay 가 전부 render() 를
+     지나므로 여기 한 곳에서만 갱신하면 active 카드와 절대 어긋나지 않습니다.
+
+     확대한 공간 사진을 배경으로 깔던 방식(2겹 crossfade + 밝기 자동 샘플링)을
+     걷어내고, 공간이 속한 Semantic Color Family 이름 하나만 바꿉니다.
+       · JS 는 HEX 를 모릅니다 — 'var(--world-rose)' 처럼 토큰만 가리킵니다.
+       · 그래서 Light ↔ Dark 전환에 JS 가 전혀 개입하지 않고,
+         테마를 바꿔도 active index / 스크롤 위치가 그대로 유지됩니다.
+       · 색 전환(700ms)은 CSS .worlds__bg 의 transition 이 담당합니다.       */
+  var worldsSec = document.getElementById('worlds');
+  var famNow = null;
+  function syncBg(world) {
+    var f = (world && world.fam) || 'neutral';
+    if (f === famNow) return;      /* 같은 계열끼리 이동하면 전환이 일어나지 않습니다 */
+    famNow = f;
+    if (worldsSec) worldsSec.style.setProperty('--world-bg', 'var(--world-' + f + ')');
+  }
+
+
+  window.__worldsRender = function () { render(true); };
+
+  function go(i) { active = ((i % N) + N) % N; render(); restartAuto(); }
+  function next() { go(active + 1); }
+  function prev() { go(active - 1); }
+
+  $('#wNext').addEventListener('click', next);
+  $('#wPrev').addEventListener('click', prev);
+  stage.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight') { e.preventDefault(); next(); }
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); prev(); }
+  });
+
+  /* drag / swipe */
+  var down = false, startX = 0, dx = 0, dragged = false, pid = null;
+  /* 키보드를 쓰기 시작하면 접근성 표시를 다시 켭니다 */
+  stage.addEventListener('keydown', function () { stage.classList.remove('is-pointer'); });
+  /* ⚠️ 포인터로 만지는 순간 keyboard focus ring 을 확실히 끕니다.
+     (한 번 키보드로 포커스가 잡히면 그 뒤 마우스 클릭에도 브라우저가
+      :focus-visible 을 유지해서 흰 ring 이 남습니다 — 실측 확인) */
+  stage.addEventListener('pointerdown', function (e) {
+    stage.classList.add('is-pointer');
+    if (e.button !== undefined && e.button !== 0) return;
+    down = true; dragged = false; startX = e.clientX; dx = 0; pid = e.pointerId;
+    try { stage.setPointerCapture(e.pointerId); } catch (_) {}
+    stage.classList.add('is-dragging', 'no-anim');
+    pauseAuto();
+  });
+  stage.addEventListener('pointermove', function (e) {
+    if (!down) return;
+    dx = e.clientX - startX;
+    if (Math.abs(dx) > 6) dragged = true;
+    for (var i = 0; i < N; i++) {
+      var oo = offsetOf(i), aa = Math.abs(oo);
+      slides[i].style.setProperty('--x', ((oo < 0 ? -1 : 1) * POS[Math.min(aa, 3)] + dx * .82).toFixed(1));
+    }
+  }, { passive: true });
+  /* 좌표 위에 있는 카드 — 카드끼리 겹치므로 중앙에 가까운(위에 있는) 쪽을 고릅니다 */
+  function slideAt(x, y) {
+    var best = -1, bestA = 99;
+    for (var i = 0; i < N; i++) {
+      var el = slides[i];
+      if (!el.classList.contains('is-live')) continue;
+      var r = el.getBoundingClientRect();
+      if (x < r.left || x > r.right || y < r.top || y > r.bottom) continue;
+      var a = Math.abs(offsetOf(i));
+      if (a < bestA) { bestA = a; best = i; }
+    }
+    return best;
+  }
+  function release(e) {
+    if (!down) return;
+    down = false;
+    stage.classList.remove('is-dragging', 'no-anim');
+    var thr = Math.max(48, step * .14), moved = false;
+    if (dx < -thr) { active = (active + 1) % N; moved = true; }
+    else if (dx > thr) { active = (active - 1 + N) % N; moved = true; }
+    /* 스와이프가 아니었다면 = 클릭. 누른 자리의 카드를 중앙으로 */
+    if (!moved && !dragged && e && e.type === 'pointerup') {
+      var i = slideAt(e.clientX, e.clientY);
+      if (i > -1) active = i;
+    }
+    render();
+    restartAuto();
+    setTimeout(function () { dragged = false; }, 40);
+  }
+  stage.addEventListener('dragstart', function (e) { e.preventDefault(); });
+  stage.addEventListener('pointerup', release);
+  stage.addEventListener('pointercancel', release);
+  /* ⚠️ pointerleave 로는 release 하지 않습니다 — setPointerCapture 가 걸리면
+     드래그 시작 직후 pointerleave 가 한 번 날아와 스와이프가 즉시 끊깁니다.
+     캡처 덕분에 pointerup/pointercancel 은 항상 stage 로 돌아옵니다. */
+
+  /* autoplay */
+  function tick() { active = (active + 1) % N; render(); }
+  function startAuto() {
+    if (reduce || autoT) return;
+    autoT = setInterval(tick, AUTOPLAY);
+  }
+  function pauseAuto() { clearInterval(autoT); autoT = null; clearTimeout(resumeT); }
+  function restartAuto() { pauseAuto(); resumeT = setTimeout(startAuto, 3200); }
+  stage.addEventListener('pointerenter', pauseAuto);
+  stage.addEventListener('pointerleave', function () { if (!down) restartAuto(); });
+  stage.addEventListener('focusin', pauseAuto);
+  stage.addEventListener('focusout', restartAuto);
+  document.addEventListener('visibilitychange', function () { document.hidden ? pauseAuto() : restartAuto(); });
+
+  var ro = ('ResizeObserver' in window) ? new ResizeObserver(function () { measure(); render(true); }) : null;
+  if (ro) ro.observe(stage); else addEventListener('resize', function () { measure(); render(true); }, { passive: true });
+
+  measure();
+  render(true);
+  if (!reduce) {
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (es) {
+        es.forEach(function (e) { e.isIntersecting ? startAuto() : pauseAuto(); });
+      }, { threshold: .35 }).observe(stage);
+    } else { startAuto(); }
+  }
+})();
+
+/* ══════════════════════════════════════════════════════════════════
+   7b. COMMUNITY CARD VIDEO
+   ──────────────────────────────────────────────────────────────────
+   Desktop : hover 한 영상만 재생 → 벗어나면 pause + 첫 프레임으로 복귀
+   Mobile  : viewport 중앙에 가장 가까운(60% 이상 보이는) 카드 하나만 재생
+   공통     : 화면 밖 / 탭 비활성 시 반드시 pause (동시 재생 금지)
+   ══════════════════════════════════════════════════════════════════ */
+(function () {
+  var cards = $$('.card').filter(function (c) { return c.querySelector('.card__video'); });
+  if (!cards.length) return;
+  var vids = cards.map(function (c) { return c.querySelector('.card__video'); });
+
+  function play(v) { var q = v.play(); if (q && q.catch) q.catch(function () {}); }
+  function reset(v) { try { v.pause(); v.currentTime = 0; } catch (_) {} }
+
+  if (reduce) {
+    vids.forEach(function (v) { v.removeAttribute('loop'); reset(v); });   /* poster 만 노출 */
+  } else if (hoverMQ.matches) {
+    cards.forEach(function (c) {
+      var v = c.querySelector('.card__video');
+      var on = function () { c.classList.add('is-playing'); play(v); };
+      var off = function () { c.classList.remove('is-playing'); reset(v); };
+      c.addEventListener('pointerenter', on);
+      c.addEventListener('pointerleave', off);
+      c.addEventListener('focusin', on);
+      c.addEventListener('focusout', off);
+    });
+  } else if ('IntersectionObserver' in window) {
+    var vis = [];
+    var pick = function () {
+      var best = null, bestD = Infinity;
+      cards.forEach(function (c, i) {
+        if (!vis[i] || vis[i] < .6) return;
+        var r = c.getBoundingClientRect();
+        var d = Math.abs((r.top + r.bottom) / 2 - innerHeight / 2);
+        if (d < bestD) { bestD = d; best = c; }
+      });
+      cards.forEach(function (c) {
+        var v = c.querySelector('.card__video');
+        if (c === best) { c.classList.add('is-playing'); play(v); }
+        else { c.classList.remove('is-playing'); v.pause(); }
+      });
+    };
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { vis[cards.indexOf(e.target)] = e.isIntersecting ? e.intersectionRatio : 0; });
+      pick();
+    }, { threshold: [0, .3, .6, .85, 1] });
+    cards.forEach(function (c) { io.observe(c); });
+    addEventListener('scroll', function () {
+      if (pick.t) return;
+      pick.t = setTimeout(function () { pick.t = null; pick(); }, 260);
+    }, { passive: true });
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) vids.forEach(function (v) { v.pause(); });
+  });
+})();
+
+/* ══════════════════════════════════════════════════════════════════
+   8. CINEMATIC SCROLL — full-bleed → max-width 1400
+   scroll progress 를 CSS 변수 하나로만 넘기고, width/​radius 는 CSS 가 계산합니다.
+   ══════════════════════════════════════════════════════════════════ */
+(function () {
+  var sec = $('#cine'), media = $('#cineMedia'), video = $('#cineVideo');
+  if (!sec || !media) return;
+  var lines = $$('.cine__copy .line', sec);
+  var running = false, p = 0;
+
+  /* prefers-reduced-motion — 스크롤 연출 없이 최종 카드 상태로 고정 */
+  function settle() {
+    media.style.setProperty('--p', '.999');
+    lines.forEach(function (l) { l.classList.add('is-in'); });
+  }
+
+  function update() {
+    running = false;
+    var r = sec.getBoundingClientRect();
+    var span = r.height - innerHeight;
+    var raw = span > 0 ? clamp(-r.top / span, 0, 1) : 0;
+    /* 0~15%  full-screen 유지
+       15~60% 영상 축소 + radius 증가
+       그 이후 텍스트 — 축소와 텍스트가 하나의 연속 시퀀스로 읽히게 */
+    p = clamp((raw - .15) / .45, 0, 1);
+    /* ⚠️ 0.999 로 잘라 씁니다 — Chromium 이 --p 가 정확히 1 일 때
+       calc(100vw - (100vw - X) * 1) 을 0 으로 접어버립니다 (폭이 무너짐). */
+    media.style.setProperty('--p', Math.min(p, .999).toFixed(4));
+    /* 축소가 상당히 진행된 뒤에 텍스트. 두 줄 사이 90ms 시차는 CSS 가 갖고 있습니다. */
+    var textIn = p > .72;
+    lines[0].classList.toggle('is-in', textIn);
+    lines[1].classList.toggle('is-in', textIn);
+  }
+  function onScroll() { if (!running) { running = true; requestAnimationFrame(update); } }
+
+  if (reduce) {
+    settle();
+    if (video) { try { video.pause(); video.removeAttribute('autoplay'); } catch (_) {} }
+  } else {
+    addEventListener('scroll', onScroll, { passive: true });
+    addEventListener('resize', onScroll, { passive: true });
+    update();
+  }
+
+  /* 화면 밖에서는 영상을 멈춰 모바일 배터리·GPU 부담을 줄입니다 */
+  if (video && !reduce && 'IntersectionObserver' in window) {
+    new IntersectionObserver(function (es) {
+      es.forEach(function (e) {
+        if (e.isIntersecting) { var q = video.play(); if (q && q.catch) q.catch(function () {}); }
+        else video.pause();
+      });
+    }, { threshold: .05 }).observe(sec);
+  }
+})();
+
+})();
+</script>
+</body>
+</html>

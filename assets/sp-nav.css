@@ -1,0 +1,456 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   SuperPlat — Mobile Header / Full-screen Navigation
+   ──────────────────────────────────────────────────────────────────────────
+   설계 원칙
+
+   1. PC 헤더는 건드리지 않습니다.
+      이 파일의 규칙은 전부 @media (max-width:991px) 안에 있거나
+      #drawer 안쪽(=PC 에서 display:none)에만 적용됩니다.
+
+   2. Light / Dark 를 위해 컴포넌트를 두 벌 만들지 않습니다.
+      채널 토큰 rgba(var(--ink-rgb), α) · var(--line) · var(--ink) · var(--body)
+      위에서만 그립니다. sp-theme.css 가 채널을 뒤집으면 그대로 다크가 됩니다.
+      (다크 전용 예외는 이 파일 맨 끝 2줄뿐입니다)
+
+   3. 정보 계층 — 상자·그림자·테두리가 아니라 타이포와 여백으로 만듭니다.
+
+        Header      로고 + [테마 · 언어 · 닫기]   ← 유틸리티는 항상 여기 하나뿐
+        ─────────────────────────────────────
+        Navigation  28~32px / 700              ← 가장 큼
+          └ Sub     16px / 500 (아코디언)
+        ─────────────────────────────────────  divider
+        User        마이페이지 / 로그인
+        CTA         SuperPlat 다운로드
+
+      하단에 테마·언어를 다시 노출하지 않습니다(중복 제거).
+   ══════════════════════════════════════════════════════════════════════════ */
+
+
+/* ══ 1. 모바일 헤더 ═══════════════════════════════════════════════════════
+   닫힘  [ SuperPlat ]                          [ Profile ] [ ☰ ]
+   열림  [ SuperPlat ]                    [ ◐ ] [ 🌐 ] [ × ]
+   테마·언어는 메뉴가 열렸을 때만 나타납니다.                              */
+:root{
+  --mnav-line:rgba(28,28,28,.10);
+  /* 모바일 Full Menu 좌우 축 — 헤더도 같은 변수를 읽어야 해서 :root 에 둡니다 */
+  --mnav-x:32px;
+}
+
+@media (max-width:991px){
+  /* 평소에는 헤더에서 내려둡니다 */
+  .header__actions .header__lang,
+  .header__actions .header__theme{display:none}
+
+  /* 메뉴가 열리면 유틸리티 그룹으로 등장 — 프로필은 자리를 내줍니다 */
+  html.is-menu .header__actions .header__theme{display:grid;order:1}
+  html.is-menu .header__actions .header__lang{display:block;order:2}
+  html.is-menu .header__actions .header__login,
+  html.is-menu .header__actions .sp-av{display:none !important}
+
+  .header__actions{gap:4px}                 /* 히트 44px + gap 4 → 시각 간격 ≈ 6px */
+  .header__actions .header__login,
+  .header__actions .sp-av{order:1}
+  .header__actions .header__burger{order:3}
+
+  /* 세 아이콘의 히트 영역과 시각 크기를 하나로 맞춥니다 (§02) */
+  .header__icon,
+  .header__burger{width:46px;height:46px}
+  .header__actions > *{align-self:center}
+  .header__icon,.header__burger,.sp-av__btn{line-height:0}
+
+  /* visual size 20~22px — Bootstrap Icons 는 path bbox 가 달라 박스를 다르게 줍니다.
+     globe2      : path 가 16 뷰박스를 꽉 채움      → 박스 = 보이는 크기
+     person-fill : bbox 12/16 = 75%                → 박스 × .75
+     x-lg(햄버거) : 아래 §3 에서 선 길이로 직접 맞춥니다 */
+  .header__icon .ic--globe{width:21px;height:21px}
+  .header__icon .ic--person{width:28px;height:28px}
+  .header__theme .ic--moon{width:20px;height:20px}
+  .header__theme .ic--sun{width:21.5px;height:21.5px}
+
+  /* 프로필 버튼 — neutral surface. 강조하지 않습니다. */
+  .header__login,
+  .sp-av__btn{
+    background:rgba(255,255,255,.13);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.20);
+    transition:background-color 160ms cubic-bezier(.16,1,.3,1),
+               box-shadow 220ms cubic-bezier(.16,1,.3,1);
+  }
+  .header.is-scrolled .header__login,   .header.is-scrolled .sp-av__btn,
+  .is-menu .header__login,              .is-menu .sp-av__btn,
+  .auth-page .header__login,            .auth-page .sp-av__btn,
+  .mypage .header__login,               .mypage .sp-av__btn,
+  .legal-page .header__login,           .legal-page .sp-av__btn,
+  .is-detail .header__login,            .is-detail .sp-av__btn{
+    background:rgba(var(--ink-rgb),.05);
+    box-shadow:inset 0 0 0 1px rgba(var(--line-rgb),.12);
+  }
+  .sp-av__btn img{box-shadow:none}
+  .header__login:active,.sp-av__btn:active{background:rgba(var(--ink-rgb),.10)}
+
+  /* 오른쪽 시각 여백을 본문 gutter 와 맞춥니다 (히트 영역이 아이콘보다 크므로) */
+  .header__burger{margin-right:-11px}
+
+  /* ── 메뉴가 열렸을 때 (§08) — 닫기 버튼만 커 보이지 않게 ──────────────
+     utility(테마 · 언어) 22~24px · close 컨테이너 44×44 · close 아이콘 20~22px.
+     닫기 버튼에는 배경 상자를 두지 않아 유틸리티 아이콘과 무게가 같아집니다. */
+  html.is-menu .header__theme,
+  html.is-menu .header__lang > button,
+  html.is-menu .header__burger{width:44px;height:44px}
+  html.is-menu .header__theme .ic--moon{width:22px;height:22px}
+  html.is-menu .header__theme .ic--sun{width:23px;height:23px}
+  html.is-menu .header__icon .ic--globe{width:23px;height:23px}
+  html.is-menu .header__burger{background:none;margin-right:-10px}
+  html.is-menu .header__burger:hover,
+  html.is-menu .header__burger:active{background:rgba(var(--ink-rgb),.06)}
+  /* X 두 줄의 길이 = 보이는 아이콘 크기 (20~22px 대각선 기준) */
+  html.is-menu .header__burger span{width:21px}
+}
+
+@media (max-width:767px){
+  :root{--header-h:74px}
+  .header__inner{padding-inline:var(--gutter)}
+
+  /* ── 로그인 / 마이페이지 원형 버튼 (모바일만) ──────────────────────
+     46px 원형 + 21px 글리프였는데, 배경·테두리를 가진 유일한 컨트롤이라
+     로고·햄버거보다 무겁게 읽혔습니다. 원형 컨테이너 자체를 44px 로 줄이고
+     글리프를 한 단계 낮춰 시각 무게를 맞춥니다.
+       · 44×44 는 시각 크기이자 히트 영역입니다 (터치 기준 충족)
+       · background / border / hover / active / radius 는 그대로입니다
+       · 로그인 상태(.sp-av__btn)도 이미 44px 이라 두 상태가 같은 프레임입니다
+     Tablet(768~991) 과 Desktop 은 이 블록 밖이라 46px 그대로입니다. */
+  .header__actions .header__login{width:44px;height:44px}
+  .header__icon .ic--person{width:27px;height:27px}   /* bbox 75% → 실제 20.3px */
+}
+@media (max-width:374px){
+  /* 360 구간 — 좌우 최소 24px (§09). 헤더 · 네비 · 계정이 같이 따라옵니다. */
+  :root{--mnav-x:24px}
+}
+@media (max-width:359px){
+  :root{--header-h:70px}
+  .header__inner{padding-inline:18px}
+  .header__actions{gap:2px}
+}
+
+
+/* ══ 2. 언어 선택 — 작고 납작하게 (§Language Interaction) ════════════════
+   과한 dropdown box / shadow 를 쓰지 않고, 현재 언어에 체크만 둡니다.     */
+@media (max-width:991px){
+  .header__langmenu{
+    min-width:150px;
+    padding:6px;
+    background:var(--sp-menu-bg,#fff);
+    border-radius:14px;
+    box-shadow:0 6px 20px rgba(0,0,0,.10), 0 0 0 1px rgba(var(--line-rgb),.10);
+  }
+  .header__langmenu button{
+    justify-content:space-between;
+    min-height:46px;
+    font-size:15px;
+    color:var(--body-2,rgba(var(--ink-rgb),.82));
+  }
+  .header__langmenu button[aria-current='true']{
+    background:transparent;font-weight:700;color:var(--ink);
+  }
+  /* 체크 — 선택된 언어에만 */
+  .header__langmenu button[aria-current='true']::after{
+    content:'';
+    width:16px;height:16px;flex:none;margin-left:12px;
+    background:currentColor;
+    -webkit-mask:no-repeat center/16px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425z'/%3E%3C/svg%3E");
+    mask:no-repeat center/16px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425z'/%3E%3C/svg%3E");
+  }
+  .header__langmenu button:not([aria-current='true'])::after{content:none}
+}
+
+
+/* ══ 3. 햄버거 ↔ 닫기 ════════════════════════════════════════════════════
+   가운데 줄은 사라지고 바깥 두 줄만 45° 로 모입니다 (과한 회전 없음). */
+.header__burger span{
+  transition:transform 240ms cubic-bezier(.16,1,.3,1),
+             opacity 160ms cubic-bezier(.16,1,.3,1);
+}
+.is-menu .header__burger span:nth-child(2){opacity:0;transform:scaleX(.6)}
+@media (prefers-reduced-motion:reduce){ .header__burger span{transition-duration:1ms} }
+
+
+/* ══ 4. 풀스크린 메뉴 ═════════════════════════════════════════════════════ */
+@media (max-width:991px){
+  .drawer{
+    /* 주소창이 늘었다 줄어도 높이가 흔들리지 않게 dvh 를 씁니다 */
+    height:100dvh;
+    padding:0;
+    display:block;
+    transform:none;
+    /* 열릴 때 300~400ms / 닫힐 때 200~250ms (§10) */
+    transition:opacity 220ms cubic-bezier(.16,1,.3,1) 40ms, visibility 260ms;
+  }
+  .is-menu .drawer{
+    transform:none;
+    transition:opacity 340ms cubic-bezier(.22,1,.36,1), visibility 340ms;
+  }
+
+  /* 스크롤은 메뉴 안에서만 — 뒤 페이지로 새지 않습니다 */
+  .mnav{
+    /* 화면이 작으면 메뉴 전체가 세로 스크롤됩니다 (고정 높이에 억지로 넣지 않습니다) */
+    height:100%;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+    display:flex;flex-direction:column;
+    /* 좌우 축 — 헤더 · 네비게이션 · 계정 영역이 하나의 세로축을 씁니다
+       (--mnav-x 는 :root 에 있습니다. 375 기준 32px, 374 이하 24px · §09) */
+    padding:calc(env(safe-area-inset-top, 0px) + var(--header-h) + 40px)
+            var(--mnav-x)
+            calc(env(safe-area-inset-bottom, 0px) + 28px);
+  }
+  /* ⚠️ 헤더 좌우 축은 메뉴가 열렸을 때만 메뉴와 맞춥니다.
+     닫힌 상태의 헤더는 본문 gutter 를 그대로 써야 로고가 콘텐츠와 정렬됩니다. */
+  html.is-menu .header__inner{padding-inline:var(--mnav-x, 32px)}
+
+  /* ── 4-1. Main navigation ──────────────────────────────────────────
+     ⚠️ 이전에는 26~27px 메뉴 4개를 8px gap 으로 띄엄띄엄 두어서 무거웠습니다.
+        이제 gap 을 없애고 row 자체의 높이(88px)와 아주 얇은 divider 로
+        리듬을 만듭니다 — "큰 메뉴 나열" 이 아니라 "정돈된 navigation list".
+        1Depth 라벨은 KO/EN 모두 영문 대문자입니다 (sp-nav.js MLABEL). */
+  .mnav__list{display:flex;flex-direction:column;gap:0;margin-top:0}
+  .mnav__item{
+    border:0;
+    border-bottom:1px solid var(--mnav-line, rgba(28,28,28,.10));
+  }
+
+  /* row 전체가 클릭 영역입니다 — 텍스트만 눌리는 구조를 쓰지 않습니다 */
+  .mnav__link,
+  .mnav__row{
+    display:flex;align-items:center;justify-content:flex-start;gap:12px;
+    width:100%;min-height:88px;
+    padding:0;margin:0;
+    border:0;background:none;cursor:pointer;
+    font:inherit;text-align:left;
+    font-size:clamp(22px, 6.4vw, 24px);
+    font-weight:700;
+    line-height:1.3;
+    letter-spacing:-.02em;
+    color:var(--ink);
+    /* 진입 모션 — 아래 §5 에서 stagger */
+    opacity:0;transform:translateY(10px);
+    transition:opacity 150ms cubic-bezier(.16,1,.3,1),
+               transform 150ms cubic-bezier(.16,1,.3,1);
+  }
+  /* 토글 row 안의 라벨은 자기 자신이 애니메이션 대상이 아닙니다 */
+  .mnav__row .mnav__link{
+    min-height:0;flex:1 1 auto;opacity:1;transform:none;transition:none;
+  }
+  /* 현재 페이지 — bullet/dot/화살표 없이 아주 얇은 밑줄만 (§06) */
+  .mnav__link[aria-current="page"]{
+    text-decoration:underline;
+    text-decoration-thickness:2px;
+    text-underline-offset:7px;
+    text-decoration-color:rgba(var(--ink-rgb),.28);
+  }
+  .mnav__row:active .mnav__link,
+  .mnav__link:active{opacity:.62}
+
+  /* chevron — 하위 메뉴가 있는 항목에만. 작고 정교하게, 우측 세로 중앙. */
+  .mnav__tog{
+    width:18px;height:18px;flex:none;margin-left:auto;
+    display:grid;place-items:center;
+    color:var(--body-2nd, rgba(var(--ink-rgb),.56));
+    pointer-events:none;                 /* 클릭은 row 가 받습니다 */
+  }
+  .mnav__tog svg{
+    width:17px;height:17px;fill:currentColor;display:block;
+    transition:transform 230ms cubic-bezier(.22,1,.36,1);
+  }
+  .mnav__row[aria-expanded="true"] .mnav__tog svg{transform:rotate(180deg)}
+  .mnav__row:focus-visible{outline:2px solid var(--ink);outline-offset:-2px;border-radius:8px}
+
+  /* ── 4-2. Sub navigation ────────────────────────────────────────────
+     같은 row 안에서 펼쳐집니다. 1Depth(24px/700) 대비 16~17px/500 으로
+     위계를 확실히 낮춥니다. */
+  .mnav__subwrap{overflow:hidden}
+  .mnav__sub{
+    list-style:none;margin:0;
+    padding:0 0 14px;
+    display:flex;flex-direction:column;
+  }
+  .mnav__sublink{
+    display:flex;align-items:center;
+    min-height:48px;
+    font-size:17px;font-weight:500;letter-spacing:-.01em;
+    color:var(--body-2, rgba(var(--ink-rgb),.82));
+  }
+  @media (hover:hover){ .mnav__sublink:hover{color:var(--ink)} }
+  .mnav__sublink:active{opacity:.6}
+
+  /* ── 4-3. Divider · User · CTA ────────────────────────────────────── */
+  .mnav__end{
+    margin-top:auto;
+    padding-top:0;
+    opacity:0;transform:translateY(10px);
+    transition:opacity 150ms cubic-bezier(.16,1,.3,1),
+               transform 150ms cubic-bezier(.16,1,.3,1);
+  }
+  /* 메뉴와 계정 영역을 확실히 분리하는 divider */
+  .mnav__div{height:1px;background:var(--mnav-line, rgba(28,28,28,.10));margin:28px 0 4px}
+
+  .mnav__user{
+    display:flex;align-items:center;gap:14px;
+    min-height:68px;
+    padding:8px 0;
+    color:var(--ink);
+  }
+  .mnav__ava{
+    width:42px;height:42px;flex:none;
+    display:grid;place-items:center;
+    border-radius:999px;
+    background:rgba(var(--ink-rgb),.05);
+    box-shadow:inset 0 0 0 1px rgba(var(--line-rgb),.12);
+    overflow:hidden;
+  }
+  .mnav__ava svg{width:24px;height:24px;fill:currentColor;display:block;opacity:.72}
+  .mnav__ava.has-img{background:none;box-shadow:inset 0 0 0 1px rgba(var(--line-rgb),.12)}
+  .mnav__ava img{width:100%;height:100%;object-fit:cover;display:block}
+  .mnav__utext{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .mnav__utitle{font-size:21px;font-weight:650;letter-spacing:-.015em;color:var(--ink)}
+  .mnav__usub{
+    font-size:14.5px;font-weight:400;color:var(--body-2nd, rgba(var(--ink-rgb),.56));
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .mnav__user:active{opacity:.62}
+
+  /* 로그아웃 — 마이페이지와 같은 무게로 보이지 않게 작은 secondary (§06) */
+  .mnav__logout{
+    display:block;
+    min-height:44px;
+    margin:2px 0 4px;
+    padding:0;
+    border:0;background:none;cursor:pointer;
+    font-size:13.5px;font-weight:500;text-align:left;
+    color:var(--body-2nd, rgba(var(--ink-rgb),.56));
+  }
+  .mnav__logout[hidden]{display:none}
+  .mnav__logout:active{opacity:.6}
+  .mnav__logout:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:6px}
+
+  /* ── 4-4. Download CTA — PC 헤더 버튼과 같은 토큰을 씁니다 ─────────── */
+  .mnav__cta{
+    display:flex;align-items:center;justify-content:center;gap:9px;
+    height:58px;                            /* §11 56~60 */
+    margin-top:26px;                        /* 계정 영역과 24~28 */
+    border-radius:17px;                     /* §11 16~18 */
+    background:var(--dl-solid-bg, var(--ink));
+    color:var(--dl-solid-fg, #fff);
+    font-size:var(--font-btn, 16px);font-weight:600;letter-spacing:-.01em;
+    transition:transform 160ms cubic-bezier(.16,1,.3,1),
+               background-color 220ms cubic-bezier(.16,1,.3,1);
+  }
+  .mnav__cta-ic{width:16px;height:16px;fill:currentColor;display:block;opacity:.9}
+  .mnav__cta:active{transform:scale(.985)}
+  .mnav__cta:focus-visible{outline:2px solid var(--dl-solid-bg, var(--ink));outline-offset:3px}
+
+  /* ── 4-5. 진입 모션 — stagger 36ms (§10) ──────────────────────────── */
+  /* ⚠️ .mnav__row 를 빠뜨리면 아코디언 항목(NEWS · SUPPORT)이 opacity:0 인 채로
+     남아 글자가 통째로 안 보입니다 — 실측으로 잡은 버그입니다. */
+  .is-menu .mnav__link,
+  .is-menu .mnav__row,
+  .is-menu .mnav__tog{
+    opacity:1;transform:none;
+    transition:opacity 340ms cubic-bezier(.22,1,.36,1),
+               transform 340ms cubic-bezier(.22,1,.36,1);
+    transition-delay:calc(60ms + var(--i, 0) * 36ms);
+  }
+  .is-menu .mnav__end{
+    opacity:1;transform:none;
+    transition:opacity 340ms cubic-bezier(.22,1,.36,1) .21s,
+               transform 340ms cubic-bezier(.22,1,.36,1) .21s;
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    .drawer,.mnav__link,.mnav__row,.mnav__tog,.mnav__end,.mnav__tog svg,
+    .is-menu .drawer,.is-menu .mnav__link,.is-menu .mnav__row,
+    .is-menu .mnav__tog,.is-menu .mnav__end{
+      transition-duration:1ms !important;transition-delay:0s !important;transform:none !important;
+    }
+  }
+
+  /* 포커스 링 — 키보드 사용자에게만 */
+  .mnav__link:focus-visible,
+  .mnav__sublink:focus-visible,
+  .mnav__user:focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:8px}
+}
+
+/* 태블릿 — 폭 전체로 늘어나면 읽기 리듬이 깨지므로 본문 폭만 제한합니다 */
+@media (min-width:600px) and (max-width:991px){
+  .mnav__list,.mnav__end{width:100%;max-width:560px}
+}
+
+/* dvh 미지원 브라우저 대비 */
+@supports not (height:100dvh){
+  @media (max-width:991px){ .drawer{height:100vh} }
+}
+
+
+/* ══ 5. Dark — 예외는 여기 2줄 뿐입니다 ══════════════════════════════════ */
+html[data-theme="dark"] .mnav__ava{background:rgba(255,255,255,.06)}
+html[data-theme="dark"] .header__langmenu{box-shadow:0 8px 26px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.08)}
+
+
+/* ══ 6. PC 헤더 Hover Dropdown (≥992px) ═══════════════════════════════════
+   News / Support 에만 붙습니다. About / World & IP 는 Direct Link 라서
+   chevron 도, 드롭다운도 없습니다 — 모바일 메뉴와 같은 규칙입니다.
+
+   표면 · 옵션 · 모션은 사이트 공통 Dropdown 토큰(assets/sp-ui.js)을 그대로
+   씁니다. 새 디자인 시스템을 만들지 않습니다 (§3).
+     --sp-menu-bg / --sp-menu-sh / --sp-menu-r / --sp-menu-pad
+     --sp-opt-h / --sp-opt-r / --sp-opt-hover
+   Dark 값은 sp-theme.css 가 이미 재정의해 두었으므로 별도 규칙이 없습니다.  */
+@media (min-width:992px){
+  .hdrop{position:relative;display:flex;align-items:center}
+
+  .hdrop__menu{
+    position:absolute;
+    top:calc(100% + 10px);        /* 헤더와 10px 시각적 간격 */
+    left:50%;
+    z-index:var(--z-pop, 600);
+    min-width:190px;
+    padding:var(--sp-menu-pad, 7px);
+    background:var(--sp-menu-bg, #fff);
+    border-radius:var(--sp-menu-r, 14px);
+    box-shadow:var(--sp-menu-sh, 0 10px 30px rgba(0,0,0,.08), 0 0 0 1px rgba(var(--ink-rgb),.05));
+    opacity:0;visibility:hidden;
+    transform:translateX(-50%) translateY(-4px) scale(.98);
+    transform-origin:top center;
+    transition:opacity 180ms cubic-bezier(.22,1,.36,1),
+               transform 180ms cubic-bezier(.22,1,.36,1),
+               visibility 180ms;
+  }
+  /* ⚠️ Invisible bridge — 헤더에서 드롭다운으로 마우스를 옮기는 10px 사이에서
+     mouseleave 가 나 메뉴가 닫히지 않도록 히트 영역만 위로 늘립니다. */
+  .hdrop__menu::before{
+    content:'';position:absolute;left:0;right:0;top:-14px;height:14px;
+  }
+  .hdrop.is-open .hdrop__menu{
+    opacity:1;visibility:visible;
+    transform:translateX(-50%) translateY(0) scale(1);
+    transition-duration:220ms;
+  }
+
+  .hdrop__item{
+    display:flex;align-items:center;
+    min-height:var(--sp-opt-h, 42px);
+    padding:0 15px;
+    border-radius:var(--sp-opt-r, 9px);
+    font-size:15px;font-weight:500;letter-spacing:-.01em;
+    color:var(--sp-ink, var(--ink));      /* 사진 위 흰 헤더 텍스트를 물려받지 않게 */
+    white-space:nowrap;
+    transition:background-color 160ms cubic-bezier(.16,1,.3,1);
+  }
+  @media (hover:hover){
+    .hdrop__item:hover{background:var(--sp-opt-hover, rgba(var(--ink-rgb),.045))}
+  }
+  .hdrop__item:focus-visible{outline:2px solid var(--sp-ink, var(--ink));outline-offset:-2px}
+
+  @media (prefers-reduced-motion:reduce){
+    .hdrop__menu{transition-duration:1ms}
+  }
+}

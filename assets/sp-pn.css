@@ -1,0 +1,149 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   SuperPlat — 상세보기 「이전 / 다음」 공통 컴포넌트
+   ──────────────────────────────────────────────────────────────────────────
+   ⚠️ 이 파일이 유일한 소스입니다.
+      공지사항 · 업데이트 · 이벤트 · 고객지원 상세가 전부 이 CSS 와
+      assets/sp-pn.js 하나를 씁니다. 페이지별 .pn* 규칙을 다시 만들지 마세요.
+      페이지마다 다른 것은 오직 넘겨주는 data 뿐입니다.
+
+   구조
+     .pnwrap                     상단 divider + 여백
+       .pn                       PC 2열 / Mobile 1열
+         .pn__col
+           .pn__lab              "이전" / "다음"
+           .pn__card             thumbnail + text 가로형 카드
+             .pn__thumb > img    16:9 · cover
+             .pn__body
+               .pn__cat          badge
+               .pn__t            제목 (2줄 clamp)
+               .pn__d            날짜 / 기간
+     .backwrap > .pn__list       "목록으로"
+
+   썸네일이 없는 콘텐츠(1:1 문의)는 .pn__card--notext 로 1열이 되며,
+   padding · radius · typography · hover 는 완전히 동일합니다.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+:root{
+  --pn-surface:#FAFAFA;
+  --pn-surface-hover:#F2F3F5;
+  --pn-line:#ECEDEF;
+  --pn-cat-bg:#EAF1FB;
+  --pn-cat-fg:#2B6CB0;
+  --pn-thumb-bg:#E9E9EB;
+}
+
+.pnwrap{
+  margin-top:clamp(44px,5.5vw,106px);
+  border-top:1px solid rgba(var(--ink-rgb),.10);
+  padding-top:clamp(28px,3vw,56px);
+}
+.pn{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:clamp(16px,1.7vw,28px);
+  align-items:stretch;
+}
+/* 한쪽만 있을 때 남은 카드가 반쪽에 어색하게 붙지 않도록 전체 폭을 씁니다 */
+.pn.pn--one{grid-template-columns:minmax(0,1fr)}
+.pn__col{display:flex;flex-direction:column;min-width:0}
+
+.pn__lab{
+  margin-bottom:clamp(10px,.85vw,14px);
+  font-size:clamp(18px,1.15vw,20px);font-weight:600;
+  letter-spacing:-.02em;color:var(--ink);
+}
+
+.pn__card{
+  flex:1;display:grid;
+  /* 썸네일이 카드를 지배하지 않게 — 레퍼런스와 같은 정보 밀도 */
+  grid-template-columns:clamp(220px,30%,320px) minmax(0,1fr);
+  gap:clamp(14px,1.25vw,22px);
+  align-items:center;
+  width:100%;
+  padding:clamp(16px,1.35vw,20px);
+  border:1px solid var(--pn-line);
+  border-radius:clamp(20px,1.55vw,24px);
+  background:var(--pn-surface);
+  font:inherit;text-align:left;cursor:pointer;
+  /* ⚠️ min-height 를 주지 않습니다 — 이미지가 카드 높이를 밀어올리지 않고,
+     제목 2줄 고정(min-height)이 좌우 카드 높이를 맞춰 줍니다. */
+  transition:background-color 200ms var(--ease, cubic-bezier(.16,1,.3,1)),
+             border-color 200ms var(--ease, cubic-bezier(.16,1,.3,1));
+}
+/* 썸네일이 없는 콘텐츠(1:1 문의) — 텍스트 한 덩어리로 */
+.pn__card--notext{grid-template-columns:minmax(0,1fr)}
+
+.pn__thumb{
+  display:block;width:100%;
+  aspect-ratio:16 / 9;border-radius:16px;overflow:hidden;
+  background:var(--pn-thumb-bg);
+}
+.pn__thumb img{
+  width:100%;height:100%;object-fit:cover;display:block;
+  transform:scale(1);
+  transition:transform 220ms var(--ease, cubic-bezier(.16,1,.3,1));
+}
+
+.pn__body{min-width:0;display:flex;flex-direction:column;align-items:flex-start}
+.pn__cat{
+  display:inline-flex;align-items:center;height:26px;padding:0 11px;border-radius:999px;
+  background:var(--pn-cat-bg);color:var(--pn-cat-fg);
+  font-size:clamp(12px,.68vw,13px);font-weight:600;line-height:1;white-space:nowrap;
+}
+.pn__t{
+  margin-top:clamp(10px,.83vw,14px);
+  font-size:clamp(16px,1vw,19px);font-weight:700;line-height:1.45;
+  letter-spacing:-.02em;color:var(--ink);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  /* 제목이 1줄이어도 2줄 자리를 차지해 좌우 카드 높이와 날짜 baseline 이 맞습니다 */
+  min-height:calc(2 * 1.45em);
+}
+.pn__d{
+  margin-top:clamp(8px,.6vw,12px);
+  font-size:clamp(13px,.73vw,14px);font-weight:400;
+  color:var(--body-2nd);font-variant-numeric:tabular-nums;
+}
+
+@media (hover:hover){
+  .pn__card:hover{background:var(--pn-surface-hover);border-color:rgba(var(--ink-rgb),.12)}
+  .pn__card:hover .pn__thumb img{transform:scale(1.03)}
+}
+@media (hover:none){ .pn__card:active{background:var(--pn-surface-hover)} }
+.pn__card:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){
+  .pn__card,.pn__thumb img{transition:none}
+}
+
+/* ── 목록으로 — 이전/다음 영역과 같은 간격 규칙을 모든 페이지가 공유합니다 ── */
+.backwrap{
+  margin-top:clamp(48px,3.6vw,64px);
+  display:flex;justify-content:center;
+}
+.pn__list{
+  display:inline-flex;align-items:center;justify-content:center;
+  height:clamp(48px,3vw,54px);padding:0 clamp(26px,2vw,34px);
+  border:1px solid rgba(var(--ink-rgb),.14);border-radius:999px;
+  background:transparent;color:var(--ink);
+  font:inherit;font-size:clamp(15px,.94vw,16px);font-weight:600;letter-spacing:-.01em;
+  cursor:pointer;
+  transition:background-color 200ms var(--ease, cubic-bezier(.16,1,.3,1)),
+             border-color 200ms var(--ease, cubic-bezier(.16,1,.3,1));
+}
+@media (hover:hover){ .pn__list:hover{background:rgba(var(--ink-rgb),.05);border-color:rgba(var(--ink-rgb),.24)} }
+.pn__list:active{background:rgba(var(--ink-rgb),.08)}
+.pn__list:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+
+/* ── 모바일 — 세로 1열, 썸네일 100% ─────────────────────────────────────
+   PC 의 고정 px 썸네일을 그대로 쓰지 않고 카드 폭에 맞춰 늘어납니다. */
+@media (max-width:767px){
+  .pnwrap{margin-top:clamp(36px,9vw,48px);padding-top:clamp(24px,6vw,32px)}
+  .pn{grid-template-columns:minmax(0,1fr);gap:24px}
+  .pn__lab{margin-bottom:10px;font-size:17px}
+  .pn__card{
+    grid-template-columns:minmax(0,1fr);
+    gap:14px;padding:16px;border-radius:16px;
+  }
+  .pn__thumb{border-radius:12px}
+  .pn__t{font-size:16px}
+  .backwrap{margin-top:40px}
+  .pn__list{width:100%;max-width:295px;height:52px}
+}

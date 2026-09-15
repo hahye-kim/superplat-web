@@ -167,7 +167,11 @@ html[data-theme="dark"] .mpchip.is-on,
 html[data-theme="dark"] .nchip[aria-pressed="true"],
 html[data-theme="dark"] .steps__i.is-on,
 html[data-theme="dark"] .adone__mark,
-html[data-theme="dark"] .nrow__badge{
+html[data-theme="dark"] .nrow__badge,
+/* 새 HOME 의 solid ink 버튼 3종 (히어로 CTA · 캐릭터 카드 · 공간/전체보기) */
+html[data-theme="dark"] .hhero__cta,
+html[data-theme="dark"] .hcard__cta,
+html[data-theme="dark"] .hworld__more{
   background:var(--ink);color:#14171B;
 }
 html[data-theme="dark"] .cta__btn:hover,
@@ -177,6 +181,9 @@ html[data-theme="dark"] .smore__btn:hover,
 html[data-theme="dark"] .sbtn:hover,
 html[data-theme="dark"] .abtn:hover:not([disabled]),
 html[data-theme="dark"] .dl__btn:hover,
+html[data-theme="dark"] .hhero__cta:hover,
+html[data-theme="dark"] .hcard__cta:hover,
+html[data-theme="dark"] .hworld__more:hover,
 html[data-theme="dark"] .mpbtn:hover{
   background:#FFFFFF;color:#14171B;
 }
@@ -254,6 +261,15 @@ html[data-theme="dark"] .abtn--danger{background:var(--err);color:#2A0F0C}
 html[data-theme="dark"] .abtn--danger:hover:not([disabled]){background:#FFA9A0}
 html[data-theme="dark"] .mpbtn-s--solid{background:var(--err);border-color:var(--err);color:#2A0F0C}
 html[data-theme="dark"] .mpbtn-s--danger{color:var(--err);border-color:rgba(255,138,128,.34)}
+/* 고객지원 1:1 문의 — 삭제 확인 버튼 / 목록으로 옆 [삭제] 텍스트 버튼.
+   .sbtn 의 Dark solid-ink 규칙이 specificity 로 이기므로 여기서 되돌립니다. */
+html[data-theme="dark"] .sbtn--danger{background:var(--err);color:#2A0F0C}
+html[data-theme="dark"] .pn__list--danger{color:var(--err);border-color:rgba(255,138,128,.34)}
+@media (hover:hover){
+  html[data-theme="dark"] .sbtn--danger:hover{background:#FFA9A0;color:#2A0F0C}
+  html[data-theme="dark"] .pn__list--danger:hover{background:rgba(255,138,128,.10);border-color:rgba(255,138,128,.52)}
+}
+html[data-theme="dark"] .pn__list--danger:active{background:rgba(255,138,128,.16)}
 
 /* ── 3-2. Header ─────────────────────────────────────────────────────────
    Smart Header 동작(스크롤 다운 숨김 / 업 표시)과 구조는 그대로입니다.
@@ -400,6 +416,13 @@ html[data-theme="dark"]{
   --pn-thumb-bg:#20242A;
   /* 모바일 Full Menu divider */
   --mnav-line:rgba(255,255,255,.12);
+
+  /* ── 새 HOME 표면 ────────────────────────────────────────────────
+     시안 §17 의 Dark surface hierarchy 를 기존 토큰 위에 얹습니다.
+     단순 반전이 아니라 배경(#0D0D0D) < 카드(#191919) 순서로 층을 만듭니다. */
+  --hcard-bg:#191919;
+  --hfq-bg:#161616;
+  --hfq-line:rgba(255,255,255,.10);
 
   /* ── WORLD 배경 Semantic Color Family (Dark) ────────────────────
      Light 토큰은 index.html :root 에 있습니다. 여기서 계열 6개만 뒤집으면

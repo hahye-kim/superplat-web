@@ -132,6 +132,40 @@
 .pn__list:active{background:rgba(var(--ink-rgb),.08)}
 .pn__list:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 
+/* ── 게시글 상세 Action Bar (예: 1:1 문의 상세의 수정 / 삭제) ──────────────
+   align:'split' 이나 actions 를 넘길 때만 붙습니다.
+   둘 다 없는 페이지(NEWS 공지 · 업데이트 · 이벤트)는 위 .backwrap 그대로입니다.
+
+     [ 목록으로 ]                          [ 수정 ] [ 삭제 ]
+      Navigation                    Secondary   Destructive
+
+   PC · 태블릿 · 모바일이 같은 한 줄 구조를 씁니다. 좁아지면 배치를 바꾸는 대신
+   padding 과 gap 만 줄어듭니다 — 폭이 정말 모자랄 때만 아래 fallback 이 걸립니다.
+   새 배경 카드나 divider 는 두지 않습니다. */
+.backwrap--split{
+  justify-content:space-between;align-items:center;
+  flex-wrap:nowrap;
+  gap:clamp(10px,1.6vw,20px);
+}
+/* 세 버튼 모두 .pn__list 그대로입니다 — height · radius · weight · border ·
+   hover · focus · transition 이 자동으로 같아집니다. 폭만 콘텐츠에 맞춥니다. */
+.backwrap--split .pn__list{
+  width:auto;max-width:none;flex:0 0 auto;
+  padding-inline:clamp(14px,1.5vw,22px);
+  white-space:nowrap;
+}
+.backwrap--split > .pn__list{min-width:clamp(84px,7.6vw,108px)}   /* 목록으로 */
+.backwrap__acts{display:flex;align-items:center;gap:clamp(8px,.7vw,12px);flex:0 0 auto}
+.backwrap__acts .pn__list{min-width:clamp(72px,6.2vw,92px)}       /* 수정 · 삭제 */
+
+/* 파괴적 동작 — 강한 경고 대신 색으로만 구분합니다(현재 톤 유지) */
+.pn__list--danger{color:var(--err, #C0392B);border-color:rgba(192,57,43,.28)}
+@media (hover:hover){
+  .pn__list--danger:hover{background:rgba(192,57,43,.06);border-color:rgba(192,57,43,.44)}
+}
+.pn__list--danger:active{background:rgba(192,57,43,.10)}
+.pn__list--danger:focus-visible{outline-color:var(--err, #C0392B)}
+
 /* ── 모바일 — 세로 1열, 썸네일 100% ─────────────────────────────────────
    PC 의 고정 px 썸네일을 그대로 쓰지 않고 카드 폭에 맞춰 늘어납니다. */
 @media (max-width:767px){

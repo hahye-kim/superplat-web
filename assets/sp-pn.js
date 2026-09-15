@@ -7,7 +7,9 @@
      SPPrevNext.build({
        prev: { title, badge, date, img, onClick } | null,
        next: { ... } | null,
-       list: { label, onClick },          // "목록으로"
+       list: { label, onClick,            // "목록으로"
+               actions: [ { label, onClick, danger } ]   // (선택) 우측 액션
+             },
        labels: { prev, next }             // "이전" / "다음" (i18n 은 호출부 책임)
      })  →  DocumentFragment
 
@@ -76,11 +78,30 @@
     }
 
     if (o.list) {
-      var bw = el('div', 'backwrap');
+      /* actions 도 align 도 넘기지 않으면 예전과 완전히 동일합니다
+         — 가운데 정렬된 「목록으로」 하나(NEWS 공지 · 업데이트 · 이벤트 상세).
+
+         align:'split' 이면 좌측 「목록으로」 · 우측 액션 묶음의 한 줄 Action Bar 입니다.
+         actions 가 비어도 split 을 유지하는 이유: 권한에 따라 수정/삭제가 사라졌을 때
+         「목록으로」가 갑자기 가운데 전체 폭 CTA 로 바뀌지 않게 하기 위함입니다.
+         버튼은 이 컴포넌트가 이미 쓰는 .pn__list 그대로라 새 스타일이 생기지 않습니다. */
+      var acts = (o.list.actions || []).filter(Boolean);
+      var split = acts.length > 0 || o.list.align === 'split';
+      var bw = el('div', 'backwrap' + (split ? ' backwrap--split' : ''));
       var bb = el('button', 'pn__list', o.list.label || '목록으로');
       bb.type = 'button';
       if (o.list.onClick) bb.addEventListener('click', o.list.onClick);
       bw.appendChild(bb);
+      if (acts.length) {
+        var ab = el('div', 'backwrap__acts');
+        acts.forEach(function (a) {
+          var x = el('button', 'pn__list' + (a.danger ? ' pn__list--danger' : ''), a.label);
+          x.type = 'button';
+          if (a.onClick) x.addEventListener('click', a.onClick);
+          ab.appendChild(x);
+        });
+        bw.appendChild(ab);
+      }
       frag.appendChild(bw);
     }
     return frag;

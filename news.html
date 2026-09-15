@@ -11,6 +11,8 @@
 <!-- i18n runtime — 첫 페인트 전에 <html lang> 을 확정합니다.
      ⚠️ defer / async 금지: 본문을 JS 로 그리는 페이지가 있습니다. -->
 <script src="assets/sp-i18n.js"></script>
+<!-- NEWS 데이터 (목록·상세·홈 NEWS 섹션 공용) -->
+<script src="assets/sp-news.js"></script>
 <title>NEWS — SuperPlat</title>
 <meta name="description" content="SuperPlat의 공지사항 · 업데이트 · 이벤트 소식을 확인해 보세요.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23191F28'/%3E%3Ctext x='16' y='22' font-size='16' font-family='serif' font-weight='700' fill='%23fff' text-anchor='middle'%3ES%3C/text%3E%3C/svg%3E">
@@ -641,7 +643,12 @@ html .header.is-hidden{transform:translate3d(0,-100%,0)}
     rgba(12,28,44,0)   52%);
 }
 @media (max-width:767px){
-  .phero__scrim{background:linear-gradient(180deg, rgba(12,28,44,.26) 0%, rgba(12,28,44,.06) 44%, rgba(12,28,44,.34) 100%)}
+  /* ⚠️ 모바일은 타이틀이 히어로 하단에 놓입니다(.phero__inner{justify-content:flex-end}).
+     하늘이 밝게 잡히는 크롭에서 흰 타이틀이 2.11:1 까지 떨어져, 아래쪽 stop 만
+     올렸습니다. 이미지 · 크롭 · 타이포는 그대로입니다. */
+  .phero__scrim{background:linear-gradient(180deg,
+    rgba(12,28,44,.30) 0%, rgba(12,28,44,.12) 38%,
+    rgba(12,28,44,.50) 74%, rgba(12,28,44,.62) 100%)}
 }
 .phero__inner{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;justify-content:center}
 @media (max-width:767px){ .phero__inner{justify-content:flex-end;padding-bottom:20px} }
@@ -1112,8 +1119,6 @@ html .header.is-hidden{transform:translate3d(0,-100%,0)}
   margin-top:clamp(8px,.63vw,12px);text-align:center;
   font-size:var(--font-caption);color:var(--body-2nd);
 }
-.article__cta{margin-top:clamp(28px,2.6vw,50px)}
-.article__cta .nmore__btn{height:clamp(46px,2.9vw,55px);padding:0 clamp(22px,1.7vw,32px);font-size:var(--font-body-sm)}
 
 /* prev / next */
 /* ── 이전글 / 다음글 ───────────────────────────────────────────────
@@ -1494,7 +1499,7 @@ html .header.is-hidden{transform:translate3d(0,-100%,0)}
     </a>
 
     <nav class="header__nav" aria-label="주요 메뉴" data-i18n-aria>
-      <a class="header__link" href="index.html#about" data-i18n="nav1">소개</a>
+      <a class="header__link" href="about.html" data-i18n="nav1">소개</a>
       <a class="header__link" href="world.html" data-i18n="nav2" >월드 &amp; IP</a>
       <a class="header__link" href="news.html" data-i18n="nav3" aria-current="page">뉴스</a>
       <a class="header__link" href="support.html" data-i18n="nav4">고객지원</a>
@@ -1533,7 +1538,7 @@ html .header.is-hidden{transform:translate3d(0,-100%,0)}
 <!-- 모바일 드로어 -->
 <div class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="전체 메뉴" data-i18n-aria inert>
   <nav class="drawer__nav" aria-label="모바일 메뉴" data-i18n-aria>
-    <a href="index.html#about" data-i18n="nav1">소개</a>
+    <a href="about.html" data-i18n="nav1">소개</a>
     <a href="world.html" data-i18n="nav2" >월드 &amp; IP</a>
     <a href="news.html" data-i18n="nav3" aria-current="page">뉴스</a>
     <a href="support.html" data-i18n="nav4">고객지원</a>
@@ -1646,7 +1651,7 @@ html .header.is-hidden{transform:translate3d(0,-100%,0)}
       <img src="assets/logo-superplat.png" alt="SuperPlat" width="366" height="132">
     </a>
     <nav class="footer__links" aria-label="푸터 메뉴" data-i18n-aria>
-      <a href="index.html#about" data-i18n="nav1">소개</a>
+      <a href="about.html" data-i18n="nav1">소개</a>
       <a href="world.html" data-i18n="nav2">월드 &amp; IP</a>
       <a href="news.html" data-i18n="nav3">뉴스</a>
       <a href="support.html" data-i18n="nav4">고객지원</a>
@@ -1811,52 +1816,11 @@ var $  = function (s, c) { return (c || document).querySelector(s); };
 var $$ = function (s, c) { return [].slice.call((c || document).querySelectorAll(s)); };
 var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-var NOTICES = [
-  { t:'슈퍼플랫 베타테스트 종료 안내',        en:'SuperPlat beta test closing notice',       d:'2026.08.14', like:123, view:123 },
-  { t:'슈퍼플랫 서비스 이용 안내',            en:'SuperPlat service guide',                  d:'2026.08.12', like:98,  view:412 },
-  { t:'정기 점검 안내',                       en:'Scheduled maintenance notice',             d:'2026.08.08', like:64,  view:308 },
-  { t:'개인정보처리방침 변경 안내',           en:'Privacy policy update notice',             d:'2026.08.01', like:41,  view:265 },
-  { t:'슈퍼플랫 홈페이지 오픈 안내',          en:'SuperPlat website opening notice',         d:'2026.07.28', like:150, view:520 },
-  { t:'서비스 안정화를 위한 업데이트 안내',   en:'Update notice for service stabilization',  d:'2026.07.21', like:77,  view:349 },
-  { t:'고객지원 운영 시간 안내',              en:'Customer support hours',                   d:'2026.07.15', like:33,  view:198 },
-  { t:'이용약관 개정 안내',                   en:'Terms of service revision notice',         d:'2026.07.09', like:28,  view:176 },
-  { t:'커뮤니티 이용 수칙 안내',              en:'Community guidelines',                     d:'2026.07.02', like:52,  view:241 },
-  { t:'슈퍼플랫 계정 보안 안내',              en:'SuperPlat account security guide',         d:'2026.06.24', like:61,  view:287 },
-  { t:'서비스 점검 완료 안내',                en:'Maintenance completed',                    d:'2026.06.18', like:19,  view:143 },
-  { t:'고객센터 문의 안내',                   en:'How to contact support',                   d:'2026.06.10', like:24,  view:167 }
-];
-var UPDATES = [
-  { t:'마이스페이스 생성 기능이 개선되었습니다',        en:'My Space creation has been improved',              d:'2026.08.14', like:123, view:123 },
-  { t:'새로운 공간 꾸미기 기능이 추가되었습니다',       en:'New space decorating tools have been added',        d:'2026.08.06', like:210, view:640 },
-  { t:'AI 페르소나 인터랙션이 개선되었습니다',          en:'AI persona interaction has been improved',          d:'2026.07.30', like:188, view:591 },
-  { t:'캐릭터 커스터마이징 콘텐츠가 업데이트되었습니다', en:'Character customization content has been updated',  d:'2026.07.22', like:174, view:522 },
-  { t:'추천 콘텐츠 이용 경험이 개선되었습니다',         en:'The recommended content experience has improved',   d:'2026.07.14', like:96,  view:388 },
-  { t:'월드 이동 속도가 개선되었습니다',                en:'World loading speed has been improved',             d:'2026.07.05', like:132, view:455 },
-  { t:'친구 초대 화면이 개선되었습니다',                en:'The invite screen has been improved',               d:'2026.06.28', like:87,  view:301 },
-  { t:'모바일 화면 대응이 개선되었습니다',              en:'Mobile layout support has been improved',           d:'2026.06.20', like:73,  view:284 },
-  { t:'공간 검색 기능이 개선되었습니다',                en:'Space search has been improved',                    d:'2026.06.12', like:65,  view:239 },
-  { t:'접근성 설정이 추가되었습니다',                   en:'Accessibility settings have been added',            d:'2026.06.03', like:58,  view:212 },
-  { t:'알림 설정이 세분화되었습니다',                   en:'Notification settings are now more granular',       d:'2026.05.27', like:44,  view:190 },
-  { t:'로그인 화면이 개선되었습니다',                   en:'The sign-in screen has been improved',              d:'2026.05.19', like:39,  view:171 }
-];
-var EVENTS = [
-  { t:'슈퍼플랫 친구 초대 이벤트 사전안내', en:'SuperPlat friend invitation event — advance notice',
-    img:'community-events-poster.jpg', period:'2026.03.28 09:00 ~ 2026.05.08 09:00 (KST)' },
-  { t:'새로운 친구들과 함께하는 Welcome Week', en:'Welcome Week with new friends',
-    img:'community-friends-poster.jpg', period:'2026.04.02 09:00 ~ 2026.05.10 09:00 (KST)' },
-  { t:'SuperPlat Music Festival',            en:'SuperPlat Music Festival',
-    img:'world-music-festival.jpg',     period:'2026.04.15 09:00 ~ 2026.05.20 09:00 (KST)' },
-  { t:'Blue Lagoon Summer Event',            en:'Blue Lagoon Summer Event',
-    img:'world-blue-lagoon.jpg',        period:'2026.05.01 09:00 ~ 2026.06.12 09:00 (KST)' },
-  { t:'My Gallery Showcase',                 en:'My Gallery Showcase',
-    img:'world-my-gallery-neon.jpg',    period:'2026.05.06 09:00 ~ 2026.06.18 09:00 (KST)' },
-  { t:'SuperTown Night Party',               en:'SuperTown Night Party',
-    img:'world-supertown.jpg',          period:'2026.05.20 09:00 ~ 2026.06.30 09:00 (KST)' },
-  { t:'Private Gallery Exhibition',          en:'Private Gallery Exhibition',
-    img:'world-private-gallery.jpg',    period:'2026.06.02 09:00 ~ 2026.07.14 09:00 (KST)' },
-  { t:'Popup Store Open Week',               en:'Popup Store Open Week',
-    img:'world-popup.jpg',              period:'2026.06.18 09:00 ~ 2026.07.28 09:00 (KST)' }
-];
+/* 데이터는 assets/sp-news.js 하나만 봅니다 (홈 NEWS 섹션과 공용).
+   글을 추가/수정하려면 이 파일이 아니라 sp-news.js 를 고치세요. */
+var NOTICES = window.SPNews.notices;
+var UPDATES = window.SPNews.updates;
+var EVENTS  = window.SPNews.events;
 
 var CATS = { notice:{ list:NOTICES, ko:'공지사항', en:'Notice' },
              update:{ list:UPDATES, ko:'업데이트', en:'Update' },

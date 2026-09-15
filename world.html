@@ -647,14 +647,18 @@ html .header.is-hidden{transform:translate3d(0,-100%,0)}
    사진을 어둡게 만들지 않습니다. (이미지 자체에는 filter 를 쓰지 않습니다) */
 .phero__scrim{
   position:absolute;inset:0;z-index:1;pointer-events:none;
+  /* ⚠️ 1920 · 768 에서 타이틀 뒤가 밝게 잡혀 2.4~2.5:1 이었습니다.
+     stop 위치는 그대로 두고 농도만 한 단계 올립니다. */
   background:linear-gradient(90deg,
-    rgba(20,26,38,.30) 0%,
-    rgba(20,26,38,.18) 20%,
-    rgba(20,26,38,.06) 38%,
-    rgba(20,26,38,0)   54%);
+    rgba(20,26,38,.46) 0%,
+    rgba(20,26,38,.32) 20%,
+    rgba(20,26,38,.14) 40%,
+    rgba(20,26,38,0)   60%);
 }
 @media (max-width:767px){
-  .phero__scrim{background:linear-gradient(180deg, rgba(20,26,38,.30) 0%, rgba(20,26,38,.10) 46%, rgba(20,26,38,.46) 100%)}
+  .phero__scrim{background:linear-gradient(180deg,
+    rgba(20,26,38,.32) 0%, rgba(20,26,38,.14) 38%,
+    rgba(20,26,38,.52) 72%, rgba(20,26,38,.64) 100%)}
 }
 .phero__inner{
   position:relative;z-index:2;
@@ -1376,7 +1380,7 @@ html .header.is-hidden{transform:translate3d(0,-100%,0)}
     </a>
 
     <nav class="header__nav" aria-label="주요 메뉴" data-i18n-aria>
-      <a class="header__link" href="index.html#about" data-i18n="nav1">소개</a>
+      <a class="header__link" href="about.html" data-i18n="nav1">소개</a>
       <a class="header__link" href="world.html" data-i18n="nav2" aria-current="page">월드 &amp; IP</a>
       <a class="header__link" href="news.html" data-i18n="nav3">뉴스</a>
       <a class="header__link" href="support.html" data-i18n="nav4">고객지원</a>
@@ -1415,7 +1419,7 @@ html .header.is-hidden{transform:translate3d(0,-100%,0)}
 <!-- 모바일 드로어 -->
 <div class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="전체 메뉴" data-i18n-aria inert>
   <nav class="drawer__nav" aria-label="모바일 메뉴" data-i18n-aria>
-    <a href="index.html#about" data-i18n="nav1">소개</a>
+    <a href="about.html" data-i18n="nav1">소개</a>
     <a href="world.html" data-i18n="nav2" aria-current="page">월드 &amp; IP</a>
     <a href="news.html" data-i18n="nav3">뉴스</a>
     <a href="support.html" data-i18n="nav4">고객지원</a>
@@ -1520,7 +1524,7 @@ html .header.is-hidden{transform:translate3d(0,-100%,0)}
       <img src="assets/logo-superplat.png" alt="SuperPlat" width="366" height="132">
     </a>
     <nav class="footer__links" aria-label="푸터 메뉴" data-i18n-aria>
-      <a href="index.html#about" data-i18n="nav1">소개</a>
+      <a href="about.html" data-i18n="nav1">소개</a>
       <a href="world.html" data-i18n="nav2">월드 &amp; IP</a>
       <a href="news.html" data-i18n="nav3">뉴스</a>
       <a href="support.html" data-i18n="nav4">고객지원</a>

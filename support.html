@@ -11,8 +11,6 @@
 <!-- i18n runtime — 첫 페인트 전에 <html lang> 을 확정합니다.
      ⚠️ defer / async 금지: 본문을 JS 로 그리는 페이지가 있습니다. -->
 <script src="assets/sp-i18n.js"></script>
-<!-- FAQ 데이터 (고객지원·홈 FAQ 섹션 공용) -->
-<script src="assets/sp-faq.js"></script>
 <title>Support — SuperPlat</title>
 <meta name="description" content="SuperPlat 이용에 필요한 FAQ · 1:1 문의 · 다운로드를 한곳에서 확인하세요.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23191F28'/%3E%3Ctext x='16' y='22' font-size='16' font-family='serif' font-weight='700' fill='%23fff' text-anchor='middle'%3ES%3C/text%3E%3C/svg%3E">
@@ -151,7 +149,6 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
        reveal   700~900  텍스트·카드 등장
        cinematic 900~1200 큰 비주얼
      motion hierarchy: headline > body > image > cards > buttons > 장식(정지) */
-  --err:#C0392B;                        /* 파괴적 동작 — Dark 값은 sp-theme.css */
   --ease:cubic-bezier(.16,1,.3,1);       /* primary */
   --ease-soft:cubic-bezier(.22,1,.36,1); /* subtle  */
   --t-fast:260ms;
@@ -773,186 +770,6 @@ html .header.is-hidden{transform:translate3d(0,-100%,0)}
 .sbtn--ghost{background:#fff;color:var(--ink);border:1px solid rgba(var(--ink-rgb),.16)}
 @media (hover:hover){ .sbtn--ghost:hover{background:#FAFAFA} }
 .sbtn--lg{height:clamp(52px,3.4vw,60px);font-size:var(--font-btn);border-radius:999px;padding:0 clamp(26px,2.1vw,40px)}
-/* 파괴적 동작용 solid 버튼 — 마이페이지 계정 삭제 다이얼로그와 같은 처리입니다.
-   --err 의 Dark 값은 assets/sp-theme.css 가 이미 갖고 있습니다. */
-.sbtn--danger{background:var(--err);color:#fff}
-@media (hover:hover){ .sbtn--danger:hover{background:#A93226} }
-
-/* ══ 확인 다이얼로그 · 토스트 ═══════════════════════════════════════
-   ⚠️ 클래스 이름을 마이페이지와 똑같이 씁니다(.mpdlg / .mptoast).
-      assets/sp-theme.css 가 이 이름으로 Dark 값을 이미 갖고 있어서,
-      다른 이름을 쓰면 Dark 에서 흰 상자가 그대로 남습니다. */
-.mpdlg{position:fixed;inset:0;z-index:900;display:grid;place-items:center;padding:20px}
-.mpdlg[hidden]{display:none}
-.mpdlg__dim{position:absolute;inset:0;background:rgba(12,16,24,.42)}
-.mpdlg__box{
-  position:relative;width:100%;max-width:400px;padding:26px 24px 20px;border-radius:18px;background:#fff;
-  box-shadow:0 24px 60px rgba(0,0,0,.22);
-}
-.mpdlg__t{font-size:18px;font-weight:700;letter-spacing:-.02em;color:var(--ink)}
-.mpdlg__d{margin-top:8px;font-size:14px;line-height:1.7;color:var(--body)}
-.mpdlg__a{margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.mpdlg__a .sbtn{width:100%;padding-inline:12px}
-.js .mpdlg__box{opacity:0;transform:translateY(8px) scale(.99)}
-.mpdlg.is-in .mpdlg__box{opacity:1;transform:none;transition:opacity 240ms var(--ease), transform 240ms var(--ease)}
-@media (prefers-reduced-motion:reduce){ .js .mpdlg__box{opacity:1;transform:none} }
-
-.mptoast{
-  position:fixed;left:50%;bottom:28px;z-index:1000;
-  transform:translate(-50%,12px);opacity:0;visibility:hidden;
-  display:inline-flex;align-items:center;gap:8px;
-  max-width:calc(100vw - 40px);
-  padding:14px 20px;border-radius:999px;
-  background:rgba(var(--ink-rgb),.94);color:#fff;
-  font-size:var(--font-body-sm);font-weight:600;letter-spacing:-.01em;
-  box-shadow:0 12px 32px rgba(0,0,0,.22);
-  transition:opacity 240ms var(--ease), transform 240ms var(--ease), visibility 240ms;
-}
-.mptoast.is-on{opacity:1;visibility:visible;transform:translate(-50%,0)}
-.mptoast svg{width:17px;height:17px;stroke:#7BD6A4;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
-@media (prefers-reduced-motion:reduce){ .mptoast{transition-duration:1ms} }
-@media (max-width:767px){ .mptoast{bottom:20px;padding:13px 18px} }
-
-/* ══ 첨부파일 ═══════════════════════════════════════════════════════
-   문의 내용에 딸린 보조 정보입니다 — 갤러리처럼 보이지 않게 작게 둡니다.
-   새 색 · 새 카드 스타일 · 그림자 없이 기존 radius / line 토큰만 씁니다. */
-.atts{margin-top:clamp(28px,2.6vw,40px)}
-/* 첨부파일 영역 ↔ 고객지원 답변 — 서로 다른 정보 그룹으로 읽히도록 띄웁니다.
-   섹션 간 간격이라 썸네일 크기 · 이미지 간격 · 파일명 간격은 그대로입니다.
-   기존 --space-content-lg(36/40/56/72)는 태블릿만 맞고 PC 가 72 로 과해서,
-   같은 스케일 위에 이 구간 전용 값만 프로젝트 breakpoint(1023/767)로 둡니다. */
-.atts{margin-bottom:48px}                                   /* PC */
-@media (max-width:1024px){ .atts{margin-bottom:40px} }      /* Tablet — 1024 포함 */
-@media (max-width:767px){  .atts{margin-bottom:32px} }      /* Mobile */
-.atts__lab{
-  font-size:var(--font-body-sm);font-weight:600;letter-spacing:-.01em;color:var(--ink);
-}
-.atts__lab b{margin-left:6px;font-weight:600;color:var(--body-2nd)}
-.atts__grid{
-  margin-top:12px;
-  display:grid;
-  /* 고정 폭을 쓰지 않습니다 — 화면 폭에 따라 개수와 크기가 자동으로 맞춰집니다 */
-  grid-template-columns:repeat(auto-fill, minmax(clamp(96px, 13vw, 132px), 1fr));
-  gap:clamp(10px,1vw,14px);
-}
-.att{display:flex;flex-direction:column;gap:7px;min-width:0;text-align:left}
-.att__th{
-  position:relative;display:block;width:100%;
-  aspect-ratio:1 / 1;                      /* 어떤 비율의 원본이 와도 칸이 흔들리지 않게 */
-  border:1px solid rgba(var(--ink-rgb),.10);
-  border-radius:12px;overflow:hidden;
-  background:var(--sp-surface-2, #F5F6F7);
-  cursor:zoom-in;
-  transition:border-color var(--t-ui) var(--ease);
-}
-.att__th img{width:100%;height:100%;object-fit:cover;display:block}
-@media (hover:hover){ .att__th:hover{border-color:rgba(var(--ink-rgb),.24)} }
-.att__th:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
-.att__nm{
-  font-size:var(--font-caption);line-height:1.45;color:var(--body-2nd);
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;   /* 긴 파일명 말줄임 */
-}
-/* 이미지가 아닌 첨부 — 파일 항목 형태 */
-.att--file .att__th{
-  display:grid;place-items:center;aspect-ratio:1 / 1;cursor:default;
-  color:var(--body-2nd);font-size:20px;
-}
-.att__meta{font-size:var(--font-caption);color:var(--body-2nd)}
-
-/* 작성/수정 폼의 첨부 목록 — 기존 .filelist 에 썸네일만 얹습니다 */
-.filelist__th{
-  flex:none;width:34px;height:34px;border-radius:8px;overflow:hidden;
-  border:1px solid rgba(var(--ink-rgb),.10);background:var(--sp-surface-2, #F5F6F7);
-}
-.filelist__th img{width:100%;height:100%;object-fit:cover;display:block}
-.filelist__nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-
-/* ══ 첨부 이미지 크게 보기 ═══════════════════════════════════════════
-   WORLD & IP 상세 Viewer(.wlb)와 같은 구조 · 같은 모션입니다.
-   ⚠️ 이미지는 object-fit:contain + max-width/height 라 절대 잘리지 않습니다. */
-.alb{
-  position:fixed;inset:0;z-index:var(--z-modal, 900);
-  display:flex;align-items:center;justify-content:center;
-  opacity:0;transition:opacity 320ms var(--ease-soft);
-}
-.alb.is-open{opacity:1}
-.alb[hidden]{display:none}
-.alb:focus{outline:none}
-.alb__dim{position:absolute;inset:0;background:rgba(0,0,0,.85)}
-@supports (backdrop-filter:blur(2px)){
-  .alb__dim{-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
-}
-.alb__stage{
-  position:relative;z-index:1;
-  display:flex;flex-direction:column;align-items:center;gap:clamp(14px,1.4vw,20px);
-  max-width:min(86vw, 1100px);
-  padding-block:clamp(72px,6vw,92px);
-  touch-action:pan-y;
-}
-.alb__img{
-  display:block;
-  max-width:min(86vw, 1100px);
-  max-height:70vh;
-  width:auto;height:auto;
-  object-fit:contain;                       /* 원본 비율 유지 — crop 금지 */
-  opacity:0;transform:scale(.98);
-  transition:opacity 320ms var(--ease-soft), transform 320ms var(--ease-soft);
-  -webkit-user-drag:none;user-select:none;
-}
-.alb.is-open .alb__img{opacity:1;transform:none}
-.alb__info{
-  display:flex;align-items:baseline;justify-content:space-between;gap:16px;
-  width:100%;max-width:min(86vw, 1100px);
-}
-.alb__nm{
-  font-size:clamp(13px,.9vw,14px);font-weight:500;color:rgba(255,255,255,.82);
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-}
-.alb__idx{
-  flex:none;font-size:12px;letter-spacing:.06em;color:rgba(255,255,255,.55);
-  font-variant-numeric:tabular-nums;
-}
-.alb__close,.alb__nav{
-  position:absolute;z-index:2;display:grid;place-items:center;
-  border:0;background:none;padding:0;color:rgba(255,255,255,.85);cursor:pointer;opacity:.72;
-  transition:opacity 200ms var(--ease-soft), transform 200ms var(--ease-soft), color 200ms var(--ease-soft);
-}
-.alb__close{top:clamp(16px,2vw,28px);right:clamp(16px,2vw,28px);width:46px;height:46px}
-.alb__close svg{width:22px;height:22px}
-.alb__nav{top:50%;margin-top:-26px;width:52px;height:52px}
-.alb__nav--prev{left:clamp(6px,2.4vw,36px)}
-.alb__nav--next{right:clamp(6px,2.4vw,36px)}
-.alb__nav svg{width:26px;height:26px}
-.alb__close svg,.alb__nav svg{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:block}
-@media (hover:hover){
-  .alb__close:hover{opacity:1;color:#fff}
-  .alb__nav--prev:hover{opacity:1;color:#fff;transform:translateX(-3px)}
-  .alb__nav--next:hover{opacity:1;color:#fff;transform:translateX(3px)}
-}
-.alb__close:focus-visible,.alb__nav:focus-visible{
-  opacity:1;color:#fff;outline:2px solid rgba(255,255,255,.85);outline-offset:2px;border-radius:10px;
-}
-.alb__nav[hidden]{display:none}
-@media (max-width:767px){
-  /* 좁은 화면 — 화살표를 아래로 내리지 않고 크기만 줄여 이미지를 넓게 씁니다 */
-  .alb__stage{max-width:94vw;padding-block:64px 76px}
-  .alb__img{max-width:94vw;max-height:62vh}
-  .alb__info{max-width:94vw}
-  .alb__nav{width:44px;height:44px;margin-top:-22px}
-  .alb__nav svg{width:22px;height:22px}
-  .alb__nav--prev{left:2px}
-  .alb__nav--next{right:2px}
-  .alb__close{width:44px;height:44px;top:10px;right:10px}
-}
-@media (prefers-reduced-motion:reduce){
-  .alb,.alb__img{transition-duration:1ms}
-}
-
-/* 답변완료 문의 — 수정/삭제 불가 안내 */
-.detail__lock{
-  margin-top:clamp(20px,2vw,28px);
-  font-size:var(--font-body-sm);line-height:1.7;color:var(--body-2nd);
-}
 @media (max-width:767px){
   .sbar--inq .sbar__cta{display:block;margin-bottom:16px}
   .sbar--inq .sbar__cta .sbtn{width:100%;height:56px;font-size:var(--font-body-md)}
@@ -1747,7 +1564,7 @@ textarea.form__field{min-height:clamp(180px,15.6vw,300px);padding:14px 16px;line
     </a>
 
     <nav class="header__nav" aria-label="주요 메뉴" data-i18n-aria>
-      <a class="header__link" href="about.html" data-i18n="nav1">소개</a>
+      <a class="header__link" href="index.html#about" data-i18n="nav1">소개</a>
       <a class="header__link" href="world.html" data-i18n="nav2" >월드 &amp; IP</a>
       <a class="header__link" href="news.html" data-i18n="nav3">뉴스</a>
       <a class="header__link" href="support.html" data-i18n="nav4" aria-current="page">고객지원</a>
@@ -1786,7 +1603,7 @@ textarea.form__field{min-height:clamp(180px,15.6vw,300px);padding:14px 16px;line
 <!-- 모바일 드로어 -->
 <div class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="전체 메뉴" data-i18n-aria inert>
   <nav class="drawer__nav" aria-label="모바일 메뉴" data-i18n-aria>
-    <a href="about.html" data-i18n="nav1">소개</a>
+    <a href="index.html#about" data-i18n="nav1">소개</a>
     <a href="world.html" data-i18n="nav2" >월드 &amp; IP</a>
     <a href="news.html" data-i18n="nav3">뉴스</a>
     <a href="support.html" data-i18n="nav4" aria-current="page">고객지원</a>
@@ -1886,7 +1703,7 @@ textarea.form__field{min-height:clamp(180px,15.6vw,300px);padding:14px 16px;line
       <img src="assets/logo-superplat.png" alt="SuperPlat" width="366" height="132">
     </a>
     <nav class="footer__links" aria-label="푸터 메뉴" data-i18n-aria>
-      <a href="about.html" data-i18n="nav1">소개</a>
+      <a href="index.html#about" data-i18n="nav1">소개</a>
       <a href="world.html" data-i18n="nav2">월드 &amp; IP</a>
       <a href="news.html" data-i18n="nav3">뉴스</a>
       <a href="support.html" data-i18n="nav4">고객지원</a>
@@ -2050,83 +1867,55 @@ var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 var en = function () { return root.lang === 'en'; };
 
 /* ── 데이터 ────────────────────────────────────────────────────── */
-/* 데이터는 assets/sp-faq.js 하나만 봅니다 (홈 FAQ 섹션과 공용).
-   문답을 추가/수정하려면 이 파일이 아니라 sp-faq.js 를 고치세요. */
-var FAQ_CATS = window.SPFaq.cats;
-var FAQS     = window.SPFaq.list;
-
+var FAQ_CATS = [
+  { id:'all',     ko:'전체',        en:'All' },
+  { id:'account', ko:'계정 / 로그인', en:'Account / Sign-in' },
+  { id:'install', ko:'설치 / 실행',   en:'Install / Launch' },
+  { id:'myspace', ko:'마이스페이스',  en:'My Space' },
+  { id:'char',    ko:'캐릭터',       en:'Character' },
+  { id:'pay',     ko:'결제 / 구독',   en:'Payment / Subscription' },
+  { id:'bug',     ko:'오류 / 버그',   en:'Errors / Bugs' },
+  { id:'etc',     ko:'기타',         en:'Other' }
+];
+/* ⚠️ 아래 문답은 구조 확인용 예시입니다. 실제 정책·수치는 담지 않았습니다. */
+var FAQS = [
+  { c:'account', q:'슈퍼플랫 계정은 어떻게 만드나요?', a:'슈퍼플랫 앱 또는 클라이언트를 실행한 뒤 안내에 따라 계정을 만들 수 있습니다. 가입에 사용할 수 있는 로그인 수단은 실행 화면에서 확인해 주세요.' },
+  { c:'account', q:'로그인이 되지 않습니다.', a:'입력하신 계정 정보를 다시 확인해 주시고, 네트워크 연결 상태를 점검해 주세요. 그래도 해결되지 않으면 1:1 문의로 발생 시점과 화면을 알려주시면 확인해 드리겠습니다.' },
+  { c:'account', q:'계정 정보를 변경할 수 있나요?', a:'앱 내 설정에서 계정 정보를 확인하고 변경할 수 있습니다. 변경이 어려운 항목은 1:1 문의로 안내해 드립니다.' },
+  { c:'install', q:'PC 클라이언트는 어디서 받을 수 있나요?', a:'Support 페이지의 다운로드 탭에서 PC 클라이언트를 받을 수 있습니다. 설치 전에 PC 사양을 함께 확인해 주세요.' },
+  { c:'install', q:'설치 중 오류가 발생합니다.', a:'저장 공간과 그래픽 드라이버 버전을 먼저 확인해 주세요. 다운로드 탭에서 최신 드라이버를 설치할 수 있습니다. 문제가 계속되면 오류 화면과 함께 문의해 주세요.' },
+  { c:'install', q:'모바일에서도 이용할 수 있나요?', a:'모바일 버전도 제공하고 있습니다. 다운로드 탭의 Mobile 설치 안내를 확인해 주세요.' },
+  { c:'myspace', q:'마이스페이스는 어떻게 만드나요?', a:'슈퍼플랫에 접속한 뒤 마이스페이스 메뉴에서 나만의 공간을 만들 수 있습니다. 만든 공간은 언제든 다시 꾸밀 수 있습니다.' },
+  { c:'myspace', q:'만든 공간을 친구에게 공유할 수 있나요?', a:'공간 설정에서 공개 범위를 지정할 수 있습니다. 공개로 설정하면 친구가 방문할 수 있습니다.' },
+  { c:'char',    q:'캐릭터 외형을 다시 바꿀 수 있나요?', a:'캐릭터 커스터마이징 메뉴에서 언제든 다시 변경할 수 있습니다.' },
+  { c:'char',    q:'IP 캐릭터와 대화할 수 있나요?', a:'같은 공간에 있는 캐릭터에게 말을 걸 수 있습니다. 지원되는 캐릭터는 월드 &amp; IP 페이지에서 확인해 주세요.' },
+  { c:'pay',     q:'결제 내역은 어디서 확인하나요?', a:'앱 내 설정의 결제 내역에서 확인할 수 있습니다. 결제 수단별 상세 내역은 각 스토어에서도 확인하실 수 있습니다.' },
+  { c:'pay',     q:'환불은 어떻게 요청하나요?', a:'구매하신 스토어의 환불 정책에 따라 처리됩니다. 진행이 어려운 경우 1:1 문의로 구매 내역과 함께 알려주세요.' },
+  { c:'bug',     q:'게임이 자주 멈춥니다.', a:'그래픽 드라이버를 최신 버전으로 업데이트하고 다른 프로그램을 종료한 뒤 다시 시도해 주세요. 계속된다면 사용 중인 기기와 발생 시점을 문의에 함께 적어 주세요.' },
+  { c:'bug',     q:'오류를 어떻게 신고하나요?', a:'1:1 문의에서 오류 / 버그 유형을 선택하고 발생 상황과 화면 캡처를 첨부해 주시면 확인이 빠릅니다.' },
+  { c:'etc',     q:'고객지원 답변은 얼마나 걸리나요?', a:'문의는 접수된 순서대로 확인해 답변드리고 있습니다. 답변이 등록되면 1:1 문의 내역에서 확인하실 수 있습니다.' },
+  { c:'etc',     q:'제휴 · 제안은 어디로 보내면 되나요?', a:'1:1 문의에서 기타 유형을 선택해 내용을 보내주시면 담당 부서로 전달됩니다.' }
+];
 var INQ_TYPES = FAQ_CATS.slice(1);
-/* ⚠️ 예시 문의 내역 — 실제 사용자 데이터가 아닙니다.
-   userId    작성자. 수정/삭제 권한 판정에 씁니다(현재 데모 계정 id 는 'demo').
-   updatedAt 마지막 수정 시각. 목록에 따로 표시하지는 않고 데이터로만 들고 있습니다.
-   attachments 첨부파일. 작성 화면에서 고른 파일을 그대로 들고 있습니다.
-             [{ id, name, type, size, url }]  — url 은 프로토타입이라 data URL 입니다
-             (서버가 없으므로 업로드 대신 브라우저 안에서 보관합니다).
-             문의를 삭제하면 이 배열도 문의와 함께 사라집니다 — 실제 서비스에서는
-             서버/스토리지의 첨부 삭제 정책을 따라야 합니다.
-
-   ── 테스트 조합 (화면에서 세 경우를 모두 확인할 수 있습니다) ──
-     id 1  답변중 · 내 문의        → 수정 O / 삭제 O
-     id 3  답변완료 · 내 문의      → 수정 X / 삭제 X (안내 문구 표시)
-     id 2  답변중 · 다른 사용자     → 수정 X / 삭제 X (버튼 자체가 없음)             */
+/* ⚠️ 예시 문의 내역 — 실제 사용자 데이터가 아닙니다 */
 var INQUIRIES = [
   { id:1, st:'wait', type:'bug',     t:'월드 이동 중 화면이 멈추는 현상이 있습니다', d:'2026.08.14',
-    userId:'demo', updatedAt:'',
-    /* 예시 첨부 — 기능 확인용입니다. 사용자가 새로 등록한 문의는 실제로 고른 파일이 들어갑니다. */
-    attachments:[
-      { id:'a-1', name:'world-freeze-01.jpg', type:'image/jpeg', size:56264, url:'assets/world-in-the-stillness.jpg' },
-      { id:'a-2', name:'world-freeze-02.jpg', type:'image/jpeg', size:191156, url:'assets/world-cafe.jpg' }
-    ],
     body:'월드를 이동할 때 로딩 화면에서 멈추는 경우가 있습니다.\n같은 상황이 반복되어 문의드립니다.', ans:'' },
   { id:2, st:'wait', type:'account', t:'로그인 화면에서 다음 단계로 넘어가지 않습니다', d:'2026.08.12',
-    userId:'other', updatedAt:'', attachments:[],
     body:'로그인 버튼을 눌러도 반응이 없습니다.', ans:'' },
   { id:3, st:'done', type:'install', t:'PC 클라이언트 설치 경로를 바꿀 수 있나요?', d:'2026.08.07',
-    userId:'demo', updatedAt:'',
-    attachments:[
-      { id:'a-3', name:'install-path.jpg', type:'image/jpeg', size:54674, url:'assets/world-shop.jpg' }
-    ],
     body:'기본 경로 대신 다른 드라이브에 설치하고 싶습니다.', ans:'설치 프로그램 실행 중 경로 선택 단계에서 원하시는 위치로 변경하실 수 있습니다.' },
   { id:4, st:'done', type:'myspace', t:'마이스페이스 공개 설정 문의', d:'2026.08.03',
-    userId:'demo', updatedAt:'', attachments:[],
     body:'만든 공간을 친구에게만 공개하고 싶습니다.', ans:'공간 설정의 공개 범위에서 친구 공개를 선택하시면 됩니다.' },
   { id:5, st:'done', type:'char',    t:'캐릭터 커스터마이징 저장이 안 됩니다', d:'2026.07.29',
-    userId:'demo', updatedAt:'', attachments:[],
     body:'외형을 바꾼 뒤 저장을 눌러도 이전 상태로 돌아옵니다.', ans:'해당 현상은 최신 업데이트에서 수정되었습니다. 클라이언트를 업데이트한 뒤 다시 시도해 주세요.' },
   { id:6, st:'done', type:'pay',     t:'결제 내역 확인 방법이 궁금합니다', d:'2026.07.21',
-    userId:'demo', updatedAt:'', attachments:[],
     body:'구매한 내역을 어디서 볼 수 있나요?', ans:'앱 내 설정 > 결제 내역에서 확인하실 수 있습니다.' },
   { id:7, st:'done', type:'etc',     t:'고객지원 운영 시간이 궁금합니다', d:'2026.07.15',
-    userId:'demo', updatedAt:'', attachments:[],
     body:'문의 답변은 언제 받을 수 있나요?', ans:'접수된 순서대로 확인해 답변드리고 있습니다.' },
   { id:8, st:'done', type:'bug',     t:'소리가 나오지 않습니다', d:'2026.07.08',
-    userId:'demo', updatedAt:'', attachments:[],
     body:'게임 내 소리만 들리지 않습니다.', ans:'기기의 출력 장치 설정과 앱 내 음량 설정을 함께 확인해 주세요.' }
 ];
-
-/* ══ 수정 / 삭제 권한 정책 ═══════════════════════════════════════════
-   ⚠️ 백엔드 정책이 아직 확정되지 않았습니다. 조건이 바뀌면 **이 블록만**
-      고치면 됩니다 — 화면 코드는 canEditInquiry / canDeleteInquiry 의
-      결과(true/false)만 보고 버튼을 그립니다.
-
-   ⚠️ 이것은 화면 표시용 판정일 뿐입니다. 실제 API 를 붙일 때는 서버에서도
-      같은 검증(작성자 본인인가 · 답변 전인가)을 반드시 해야 합니다.
-      클라이언트 판정만으로 수정/삭제를 허용하면 안 됩니다.                 */
-function currentUserId() {
-  var me = (window.SPAuth && SPAuth.me()) || null;
-  return me ? me.id : null;
-}
-function isMyInquiry(q0) {
-  var uid = currentUserId();
-  return !!uid && !!q0 && q0.userId === uid;
-}
-/* 답변이 등록되기 전(답변중)에만 본인이 수정/삭제할 수 있습니다 */
-function canEditInquiry(q0)   { return isMyInquiry(q0) && q0.st === 'wait'; }
-function canDeleteInquiry(q0) { return isMyInquiry(q0) && q0.st === 'wait'; }
-/* 내 문의인데 답변이 끝나서 막힌 경우에만 안내 문구를 보여줍니다
-   (남의 문의에는 안내조차 띄우지 않습니다 — 애초에 내 것이 아니므로) */
-function lockedByAnswer(q0) { return isMyInquiry(q0) && q0.st !== 'wait'; }
-
 var ST = { wait:{ ko:'답변중', en:'In progress', cls:'badge--wait' },
            done:{ ko:'답변완료', en:'Answered',   cls:'badge--done' } };
 
@@ -2296,12 +2085,6 @@ function renderInquiry() {
     return;
   }
   if (view === 'write')     { panel.appendChild(writeForm()); return; }
-  if (view === 'edit') {
-    var target = INQUIRIES.filter(function (x) { return x.id === detailId; })[0];
-    /* 권한이 없으면(내 문의가 아니거나 답변완료) 폼을 아예 열지 않습니다 */
-    if (!target || !canEditInquiry(target)) { view = 'list'; }
-    else { panel.appendChild(writeForm(target)); return; }
-  }
   if (view === 'confirmed') {
     panel.appendChild(stateBox(
       { ko:'문의가 정상적으로 등록되었습니다.', en:'Your inquiry has been submitted.' },
@@ -2344,77 +2127,6 @@ function renderInquiry() {
   if (shown < list.length) panel.appendChild(moreBox(function () { shown += 10; render(); }));
 }
 
-/* ══ 확인 다이얼로그 · 토스트 ═══════════════════════════════════════
-   마이페이지의 Confirm / Toast 와 같은 컴포넌트입니다(클래스 · 모션 · Dark 동일).
-   버튼만 이 페이지의 기본 버튼(.sbtn)을 씁니다.                          */
-/* 'YYYY.MM.DD HH:MM' — 목록/상세가 쓰는 표기와 같은 형식입니다 */
-function stamp() {
-  var n = new Date(), p2 = function (v) { return (v < 10 ? '0' : '') + v; };
-  return n.getFullYear() + '.' + p2(n.getMonth() + 1) + '.' + p2(n.getDate()) +
-         ' ' + p2(n.getHours()) + ':' + p2(n.getMinutes());
-}
-
-function Confirm(o) {
-  return new Promise(function (res) {
-    var wrap = el('div', 'mpdlg');
-    wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true');
-    var dim = el('div', 'mpdlg__dim');
-    var box = el('div', 'mpdlg__box');
-    var tid = 'sdlg-t-' + Date.now();
-    var t = el('p', 'mpdlg__t', o.title); t.id = tid;
-    wrap.setAttribute('aria-labelledby', tid);
-    box.appendChild(t);
-    if (o.desc) box.appendChild(el('p', 'mpdlg__d', o.desc));
-    var acts = el('div', 'mpdlg__a');
-    var no = el('button', 'sbtn sbtn--ghost', o.cancel || (en() ? 'Cancel' : '취소')); no.type = 'button';
-    var yes = el('button', 'sbtn' + (o.danger ? ' sbtn--danger' : ''), o.ok || (en() ? 'Confirm' : '확인')); yes.type = 'button';
-    no.addEventListener('click', function () { close(false); });
-    yes.addEventListener('click', function () { close(true); });
-    acts.appendChild(no); acts.appendChild(yes);
-    box.appendChild(acts);
-    wrap.appendChild(dim); wrap.appendChild(box);
-    document.body.appendChild(wrap);
-    requestAnimationFrame(function () { wrap.classList.add('is-in'); });
-    /* 파괴적 동작에서는 기본 포커스를 「취소」에 둡니다 */
-    no.focus();
-    function key(e) {
-      if (e.key === 'Escape') { close(false); return; }
-      /* 다이얼로그 안에서만 Tab 이 돌게 */
-      if (e.key !== 'Tab') return;
-      var f = [no, yes], i = f.indexOf(document.activeElement);
-      e.preventDefault();
-      f[(i + (e.shiftKey ? f.length - 1 : 1)) % f.length].focus();
-    }
-    document.addEventListener('keydown', key);
-    dim.addEventListener('click', function () { close(false); });
-    function close(v) {
-      document.removeEventListener('keydown', key);
-      wrap.classList.remove('is-in');
-      setTimeout(function () { wrap.remove(); }, reduce ? 0 : 220);
-      res(v);
-    }
-  });
-}
-var toastEl = null, toastT = null;
-function Toast(text) {
-  if (!toastEl) {
-    toastEl = el('div', 'mptoast');
-    toastEl.setAttribute('role', 'status');
-    toastEl.setAttribute('aria-live', 'polite');
-    document.body.appendChild(toastEl);
-  }
-  toastEl.textContent = '';
-  var sv = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  sv.setAttribute('viewBox', '0 0 24 24'); sv.setAttribute('aria-hidden', 'true');
-  var pa = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  pa.setAttribute('d', 'M5 12.6l4.4 4.4L19 7.4'); sv.appendChild(pa);
-  toastEl.appendChild(sv);
-  toastEl.appendChild(el('span', null, text));
-  toastEl.classList.add('is-on');
-  clearTimeout(toastT);
-  toastT = setTimeout(function () { toastEl.classList.remove('is-on'); }, 2400);
-}
-
 function openWrite() {
   if (!isLoggedIn) { pendingWrite = true; view = 'login'; swap(render); return; }
   view = 'write'; swap(render);
@@ -2433,18 +2145,12 @@ function field(labelKo, labelEn, node, required, hint) {
   return g;
 }
 
-/* 등록과 수정이 **같은 Form** 을 씁니다 — edit 를 넘기면 그 문의를 채워 넣고
-   제목 · 버튼 · 확인 문구만 달라집니다. 새 화면을 따로 만들지 않습니다. */
-function writeForm(edit) {
+function writeForm() {
   var wrap = el('div', 'writewrap');
-  wrap.appendChild(el('h3', 'write__title', edit
-    ? (en() ? 'Edit inquiry' : '문의 수정')
-    : (en() ? 'Write an inquiry' : '1:1 문의하기')));
-  wrap.appendChild(el('p', 'state__desc', edit
-    ? (en() ? 'Edit only the parts you need to change.' : '수정이 필요한 내용만 바꿔주세요.')
-    : (en()
-      ? 'We answer inquiries in the order they are received.'
-      : '문의하신 내용은 순차적으로 답변해 드립니다.')));
+  wrap.appendChild(el('h3', 'write__title', en() ? 'Write an inquiry' : '1:1 문의하기'));
+  wrap.appendChild(el('p', 'state__desc', en()
+    ? 'We answer inquiries in the order they are received.'
+    : '문의하신 내용은 순차적으로 답변해 드립니다.'));
   var form = el('form', 'form'); form.noValidate = true;
 
   var sel = el('select', 'form__field'); sel.id = 'iType';
@@ -2461,13 +2167,10 @@ function writeForm(edit) {
     ? 'Describe your inquiry. For an error, telling us when it happened helps us check faster.'
     : '문의 내용을 자세히 작성해 주세요.\n오류 문의의 경우 발생 상황을 함께 알려주시면 빠른 확인에 도움이 됩니다.';
 
-  /* 기존 문의 데이터를 그대로 불러옵니다 */
-  if (edit) { sel.value = edit.type; ti.value = edit.t; ta.value = edit.body; }
-
   form.appendChild(field('문의 유형', 'Inquiry type', sel, true));
   form.appendChild(field('제목', 'Title', ti, true));
   var bodyGroup = field('문의 내용', 'Inquiry', ta, true);
-  var count = el('p', 'form__count', String(ta.value.length)); bodyGroup.appendChild(count);
+  var count = el('p', 'form__count', '0'); bodyGroup.appendChild(count);
   ta.addEventListener('input', function () { count.textContent = String(ta.value.length); });
   form.appendChild(bodyGroup);
 
@@ -2483,54 +2186,17 @@ function writeForm(edit) {
   fg.appendChild(el('p', 'form__hint', en() ? 'You can attach image files (JPG, PNG).' : '이미지 파일(JPG, PNG)을 첨부할 수 있습니다.'));
   var fl = el('ul', 'filelist');
   fg.appendChild(fl);
-  /* ⚠️ 서버가 없으므로 고른 파일을 data URL 로 읽어 문의와 함께 보관합니다.
-     그래서 등록/수정 후 상세에서 **실제로 첨부한 그 이미지**가 다시 보입니다.
-     (임시 이미지를 끼워 넣는 방식이 아닙니다)
-
-     draft 는 이 폼이 들고 있는 현재 첨부 목록입니다. 수정 화면에서는 기존
-     attachments 로 시작하므로, 사용자가 직접 빼지 않으면 그대로 유지됩니다(§8). */
-  var draft = (edit && edit.attachments ? edit.attachments.slice() : []);
-  function drawFiles() {
-    fl.textContent = '';
-    draft.forEach(function (a) {
-      var li = document.createElement('li');
-      if (/^image\//.test(a.type || '')) {
-        var th = el('span', 'filelist__th');
-        var im = document.createElement('img');
-        im.src = a.url; im.alt = ''; im.setAttribute('aria-hidden', 'true');
-        im.loading = 'lazy'; im.decoding = 'async';
-        th.appendChild(im); li.appendChild(th);
-      }
-      li.appendChild(el('span', 'filelist__nm', a.name));
-      var b = el('button', null, '✕'); b.type = 'button';
-      b.setAttribute('aria-label', (en() ? 'Remove ' : '삭제 ') + a.name);
-      b.addEventListener('click', function () {
-        var i = draft.indexOf(a); if (i > -1) draft.splice(i, 1);
-        drawFiles();
-      });
-      li.appendChild(b);
-      fl.appendChild(li);
-    });
-  }
-  drawFiles();
   fi.addEventListener('change', function () {
-    var picked = [].slice.call(fi.files);
-    if (!picked.length) return;
-    var left = picked.length;
-    picked.forEach(function (f) {
-      var r = new FileReader();
-      r.onload = function () {
-        draft.push({ id: 'a-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
-                     name: f.name, type: f.type || 'application/octet-stream',
-                     size: f.size, url: r.result });
-        if (--left === 0) drawFiles();
-      };
-      r.onerror = function () { if (--left === 0) drawFiles(); };
-      r.readAsDataURL(f);
+    fl.textContent = '';
+    [].slice.call(fi.files).forEach(function (f, i) {
+      var li = document.createElement('li');
+      li.appendChild(el('span', null, f.name));
+      var b = el('button', null, '✕'); b.type = 'button';
+      b.setAttribute('aria-label', (en() ? 'Remove ' : '삭제 ') + f.name);
+      b.addEventListener('click', function () { li.remove(); });
+      li.appendChild(b); fl.appendChild(li);
     });
-    fi.value = '';           /* 같은 파일을 다시 골라도 change 가 뜨도록 */
   });
-  function attachments() { return draft.slice(); }
   form.appendChild(fg);
 
   var notice = el('div', 'notice');
@@ -2541,14 +2207,8 @@ function writeForm(edit) {
 
   var act = el('div', 'form__actions');
   var cancel = el('button', 'sbtn sbtn--ghost', en() ? 'Cancel' : '취소'); cancel.type = 'button';
-  cancel.addEventListener('click', function () {
-    /* 수정 중 취소 → 원래 보던 상세로 돌아갑니다 */
-    if (edit) { detailId = edit.id; view = 'detail'; } else { view = 'list'; }
-    swap(render);
-  });
-  var submit = el('button', 'sbtn sbtn--lg', edit
-    ? (en() ? 'Save changes' : '수정 완료')
-    : (en() ? 'Submit' : '문의 등록')); submit.type = 'submit';
+  cancel.addEventListener('click', function () { view = 'list'; swap(render); });
+  var submit = el('button', 'sbtn sbtn--lg', en() ? 'Submit' : '문의 등록'); submit.type = 'submit';
   act.appendChild(cancel); act.appendChild(submit);
   form.appendChild(act);
 
@@ -2565,163 +2225,14 @@ function writeForm(edit) {
     ok = err(ti, ti.value.trim() ? '' : (en() ? 'Please enter a title.' : '제목을 입력해주세요.')) && ok;
     ok = err(ta, ta.value.trim() ? '' : (en() ? 'Please enter your inquiry.' : '문의 내용을 입력해주세요.')) && ok;
     if (!ok) { (sel.value ? (ti.value.trim() ? ta : ti) : sel).focus(); return; }
-
-    Confirm({
-      title: edit
-        ? (en() ? 'Save these changes?' : '문의를 수정하시겠습니까?')
-        : (en() ? 'Submit this inquiry?' : '문의를 등록하시겠습니까?'),
-      ok: en() ? 'Confirm' : '확인'
-    }).then(function (yes) {
-      if (!yes) return;
-      /* ⚠️ 실제 서비스에서는 여기서 서버로 전송하고, 서버도 작성자·상태를 검증해야 합니다 */
-      if (edit) {
-        var q1 = INQUIRIES.filter(function (x) { return x.id === edit.id; })[0];
-        if (!q1 || !canEditInquiry(q1)) {   /* 그 사이 답변이 달렸을 수도 있습니다 */
-          view = 'list'; swap(render); return;
-        }
-        q1.type = sel.value; q1.t = ti.value.trim(); q1.body = ta.value.trim();
-        q1.attachments = attachments();
-        q1.updatedAt = stamp();
-        detailId = q1.id; view = 'detail'; swap(render);
-        Toast(en() ? 'Your inquiry has been updated.' : '문의가 수정되었습니다.');
-        return;
-      }
-      INQUIRIES.unshift({ id: Date.now(), st:'wait', type: sel.value, t: ti.value.trim(),
-        d: stamp().slice(0, 10), userId: currentUserId(), updatedAt:'', attachments: attachments(),
-        body: ta.value.trim(), ans:'' });
-      view = 'confirmed'; swap(render);
-    });
+    if (!confirm(en() ? 'Submit this inquiry?' : '문의를 등록하시겠습니까?')) return;
+    /* ⚠️ 실제 서비스에서는 여기서 서버로 전송합니다 */
+    INQUIRIES.unshift({ id: Date.now(), st:'wait', type: sel.value, t: ti.value.trim(),
+      d: new Date().toISOString().slice(0, 10).replace(/-/g, '.'), body: ta.value.trim(), ans:'' });
+    view = 'confirmed'; swap(render);
   });
   wrap.appendChild(form);
   return wrap;
-}
-
-/* ══ 첨부 이미지 크게 보기 ═══════════════════════════════════════════
-   WORLD & IP 상세 Viewer 와 같은 구조입니다(dim · contain · ←/→ · ESC · 포커스 복귀).
-   여러 장이면 좌우로 이동하고, 한 장이면 화살표를 만들지 않습니다.        */
-var albEl = null, albList = [], albAt = 0, albPrevFocus = null;
-function albBuild() {
-  if (albEl) return albEl;
-  var w = el('div', 'alb'); w.hidden = true; w.tabIndex = -1;
-  w.setAttribute('role', 'dialog'); w.setAttribute('aria-modal', 'true');
-  var dim = el('div', 'alb__dim');
-  var stage = el('div', 'alb__stage');
-  var im = document.createElement('img'); im.className = 'alb__img'; im.draggable = false;
-  var info = el('div', 'alb__info');
-  var nm = el('p', 'alb__nm'); var ix = el('p', 'alb__idx');
-  info.appendChild(nm); info.appendChild(ix);
-  stage.appendChild(im); stage.appendChild(info);
-  function navBtn(dir) {
-    var b = el('button', 'alb__nav alb__nav--' + (dir < 0 ? 'prev' : 'next')); b.type = 'button';
-    b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M' + (dir < 0 ? '15 5l-7 7 7 7' : '9 5l7 7-7 7') + '"/></svg>';
-    b.addEventListener('click', function (e) { e.stopPropagation(); albGo(albAt + dir); });
-    return b;
-  }
-  var prev = navBtn(-1), next = navBtn(1);
-  var close = el('button', 'alb__close'); close.type = 'button';
-  close.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
-  close.addEventListener('click', albClose);
-  dim.addEventListener('click', albClose);
-  w.appendChild(dim); w.appendChild(stage); w.appendChild(prev); w.appendChild(next); w.appendChild(close);
-  document.body.appendChild(w);
-  w.__im = im; w.__nm = nm; w.__ix = ix; w.__prev = prev; w.__next = next; w.__close = close;
-
-  w.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') { albClose(); return; }
-    if (e.key === 'ArrowLeft')  { e.preventDefault(); albGo(albAt - 1); }
-    if (e.key === 'ArrowRight') { e.preventDefault(); albGo(albAt + 1); }
-    if (e.key === 'Tab') {       /* 포커스를 모달 안에 가둡니다 */
-      var f = [w.__close, w.__prev, w.__next].filter(function (b) { return !b.hidden; });
-      var i = f.indexOf(document.activeElement);
-      e.preventDefault();
-      f[(i + (e.shiftKey ? f.length - 1 : 1) + f.length) % f.length].focus();
-    }
-  });
-  /* 모바일 스와이프 */
-  var sx = 0, sy = 0, sw = false;
-  stage.addEventListener('touchstart', function (e) {
-    sx = e.touches[0].clientX; sy = e.touches[0].clientY; sw = true;
-  }, { passive: true });
-  stage.addEventListener('touchend', function (e) {
-    if (!sw) return; sw = false;
-    var dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
-    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) albGo(albAt + (dx < 0 ? 1 : -1));
-  }, { passive: true });
-
-  albEl = w;
-  return w;
-}
-function albGo(i) {
-  if (!albList.length) return;
-  albAt = ((i % albList.length) + albList.length) % albList.length;
-  var a = albList[albAt], w = albEl;
-  w.__im.src = a.url;
-  w.__im.alt = (en() ? 'Attachment — ' : '첨부 이미지 — ') + a.name;
-  w.__nm.textContent = a.name;
-  w.__ix.textContent = (albAt + 1) + ' / ' + albList.length;
-  var one = albList.length < 2;
-  w.__prev.hidden = one; w.__next.hidden = one;
-  w.__prev.setAttribute('aria-label', en() ? 'Previous image' : '이전 이미지');
-  w.__next.setAttribute('aria-label', en() ? 'Next image' : '다음 이미지');
-  w.__close.setAttribute('aria-label', en() ? 'Close' : '닫기');
-  w.setAttribute('aria-label', (en() ? 'Attachment preview' : '첨부 이미지 보기'));
-}
-/* trigger 를 직접 받습니다 — document.activeElement 에 기대면 마우스 클릭처럼
-   포커스가 옮겨지지 않는 경로에서 닫을 때 돌아갈 곳을 잃습니다. */
-function albOpen(list, i, trigger) {
-  albList = list.slice();
-  albPrevFocus = trigger || document.activeElement;
-  var w = albBuild();
-  w.hidden = false;
-  albGo(i);
-  requestAnimationFrame(function () { w.classList.add('is-open'); w.focus(); });
-  document.body.style.overflow = 'hidden';
-}
-function albClose() {
-  if (!albEl || albEl.hidden) return;
-  albEl.classList.remove('is-open');
-  document.body.style.overflow = '';
-  setTimeout(function () { albEl.hidden = true; albEl.__im.removeAttribute('src'); }, reduce ? 0 : 320);
-  if (albPrevFocus && albPrevFocus.focus) albPrevFocus.focus();
-  albPrevFocus = null;
-}
-
-/* 상세의 첨부 영역 — 첨부가 없으면 아무것도 만들지 않습니다(§1) */
-function attachBox(q0) {
-  var list = (q0.attachments || []);
-  if (!list.length) return null;
-  var imgs = list.filter(function (a) { return /^image\//.test(a.type || ''); });
-
-  var box = el('div', 'atts');
-  var lab = el('p', 'atts__lab', en() ? 'Attachments' : '첨부파일');
-  lab.appendChild(el('b', null, String(list.length)));
-  box.appendChild(lab);
-
-  var grid = el('div', 'atts__grid');
-  list.forEach(function (a) {
-    var isImg = /^image\//.test(a.type || '');
-    var cell = el('div', 'att' + (isImg ? '' : ' att--file'));
-    if (isImg) {
-      var btn = el('button', 'att__th'); btn.type = 'button';
-      btn.setAttribute('aria-label', (en() ? 'View ' : '크게 보기 ') + a.name);
-      var im = document.createElement('img');
-      im.src = a.url; im.alt = ''; im.setAttribute('aria-hidden', 'true');
-      im.loading = 'lazy'; im.decoding = 'async';
-      btn.appendChild(im);
-      btn.addEventListener('click', function () { albOpen(imgs, imgs.indexOf(a), btn); });
-      cell.appendChild(btn);
-    } else {
-      /* 현재 문의하기는 이미지만 받지만, 다른 형식이 들어와도 깨지지 않게 둡니다 */
-      var fbox = el('div', 'att__th'); fbox.textContent = '📎';
-      cell.appendChild(fbox);
-    }
-    var nm = el('p', 'att__nm', a.name); nm.title = a.name;
-    cell.appendChild(nm);
-    if (!isImg && a.size) cell.appendChild(el('p', 'att__meta', Math.round(a.size / 1024) + 'KB'));
-    grid.appendChild(cell);
-  });
-  box.appendChild(grid);
-  return box;
 }
 
 function detailView() {
@@ -2739,8 +2250,6 @@ function detailView() {
   wrap.appendChild(head);
   var body = el('div', 'detail__body', q0.body); body.setAttribute('lang', 'ko');
   wrap.appendChild(body);
-  var att = attachBox(q0);
-  if (att) wrap.appendChild(att);
   var ans = el('div', 'detail__answer');
   ans.appendChild(el('h4', null, en() ? 'Support reply' : '고객지원 답변'));
   ans.appendChild(el('p', null, q0.ans || (en() ? 'We are preparing a reply.' : '답변을 준비 중입니다.')));
@@ -2749,45 +2258,6 @@ function detailView() {
      (assets/sp-pn.js · assets/sp-pn.css). 여기서는 data 만 다릅니다.
      1:1 문의에는 썸네일이 없으므로 img 를 넘기지 않으면 컴포넌트가 알아서
      1열 카드로 그립니다 — padding · radius · typography · hover 는 동일합니다. */
-  /* ── 수정 / 삭제 ────────────────────────────────────────────────
-     권한 판정은 canEditInquiry / canDeleteInquiry 한 곳에서만 합니다.
-     조건을 만족하지 않으면 **버튼을 만들지 않습니다**(숨기는 게 아니라 없음). */
-  var acts = [];
-  if (canEditInquiry(q0)) {
-    acts.push({
-      label: en() ? 'Edit' : '수정',
-      onClick: function () { detailId = q0.id; view = 'edit'; swap(render); }
-    });
-  }
-  if (canDeleteInquiry(q0)) {
-    acts.push({
-      label: en() ? 'Delete' : '삭제',
-      danger: true,
-      onClick: function () {
-        Confirm({
-          title: en() ? 'Delete this inquiry?' : '문의를 삭제하시겠습니까?',
-          desc:  en() ? 'A deleted inquiry cannot be restored.' : '삭제한 문의는 복구할 수 없습니다.',
-          ok:    en() ? 'Delete' : '삭제',
-          danger: true
-        }).then(function (yes) {
-          if (!yes) return;
-          var q1 = INQUIRIES.filter(function (x) { return x.id === q0.id; })[0];
-          /* ⚠️ 실제 서비스에서는 서버가 같은 조건을 다시 검증해야 합니다 */
-          if (!q1 || !canDeleteInquiry(q1)) { view = 'list'; swap(render); return; }
-          INQUIRIES.splice(INQUIRIES.indexOf(q1), 1);
-          detailId = null; view = 'list'; swap(render);
-          Toast(en() ? 'Your inquiry has been deleted.' : '문의가 삭제되었습니다.');
-        });
-      }
-    });
-  }
-  /* 내 문의인데 답변이 끝나 막힌 경우에만 이유를 알려줍니다 */
-  if (lockedByAnswer(q0)) {
-    wrap.appendChild(el('p', 'detail__lock', en()
-      ? 'Answered inquiries cannot be edited or deleted.'
-      : '답변이 완료된 문의는 수정하거나 삭제할 수 없습니다.'));
-  }
-
   var idx = INQUIRIES.indexOf(q0);
   function inqItem(target) {
     if (!target) return null;
@@ -2805,10 +2275,7 @@ function detailView() {
     next: inqItem(INQUIRIES[idx + 1]),
     list: {
       label: en() ? 'Back to list' : '목록으로',
-      onClick: function () { view = 'list'; swap(render); },
-      /* 수정/삭제가 권한에 따라 사라져도 「목록으로」의 위치가 변하지 않게 고정합니다 */
-      align: 'split',
-      actions: acts
+      onClick: function () { view = 'list'; swap(render); }
     },
     labels: {
       prev: en() ? 'Previous' : '이전',

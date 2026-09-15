@@ -64,8 +64,7 @@ CDN 을 먼저 둔 이유는 `file://` 로 더블클릭해 열었을 때도 폰�
 
 ```
 superplat-web/
-├─ index.html            홈 (Video Hero · 캐릭터 슬라이더 · 공간 rail · NEWS · FAQ · CTA)
-├─ about.html            소개 (구 HOME — Sticky Hero · 캐릭터 rail · 공간 캐러셀 · 시네마틱)
+├─ index.html            홈 (Hero · About · WORLD 캐러셀 · 캐릭터 · 커뮤니티 · CTA)
 ├─ world.html            WORLD & IP (월드 카드 + IP 캐릭터 카드 + 상세 Viewer)
 ├─ news.html             NEWS (공지사항 · 업데이트 · 이벤트)
 ├─ support.html          고객지원 (FAQ · 1:1 문의 · 다운로드)
@@ -76,9 +75,7 @@ superplat-web/
 ├─ 404.html              Not Found
 ├─ assets/
 │  ├─ sp-i18n.js         KO/EN 사전 + 런타임        ← <head> 동기 로드
-│  ├─ sp-worlds.js       WORLD 공간 데이터 (홈·소개·WORLD&IP 공용) ← <head> 동기 로드
-│  ├─ sp-news.js         NEWS 데이터 (홈·NEWS 공용)          ← <head> 동기 로드
-│  ├─ sp-faq.js          FAQ 데이터 (홈·고객지원 공용)        ← <head> 동기 로드
+│  ├─ sp-worlds.js       WORLD 공간 데이터 (홈·WORLD&IP 공용)  ← <head> 동기 로드
 │  ├─ sp-theme.js/.css   Light/Dark 토큰 + 토글
 │  ├─ sp-auth.js         계정 · 세션 · 헤더 아바타 (Mock)
 │  ├─ sp-nav.js/.css     헤더 · PC 드롭다운 · 모바일 풀메뉴
@@ -112,8 +109,7 @@ superplat-web/
 
 | Route | 화면 | 내부 상태 |
 |---|---|---|
-| `/index.html` | 홈 | `#hero` `#character` `#worlds` `#news` `#faq` `#download` 섹션 앵커 |
-| `/about.html` | 소개 (구 HOME) | `#about` `#worlds` `#download` 섹션 앵커 |
+| `/index.html` | 홈 | `#about` `#worlds` 등 섹션 앵커 |
 | `/world.html` | WORLD & IP | 탭(전체·월드·IP캐릭터) · 더보기 개수 · 상세 Viewer — 전부 JS 상태 |
 | `/news.html` | NEWS | 카테고리 탭 · 검색어 · 이벤트 상태 필터 · 상세 |
 | `/support.html` | 고객지원 | `faq` · `inquiry` · `download` 탭 |
@@ -121,11 +117,6 @@ superplat-web/
 | `/mypage.html#<tab>` | 마이페이지 | `profile` `privacy` `account` `assets` `subscription` `cards` `history` `payout` |
 | `/terms.html` `/privacy.html` | 법적 고지 | — |
 | `/404.html` | Not Found | 호스팅 설정으로 연결 |
-
-> **구 HOME → ABOUT 이동:** 예전 홈은 내용을 그대로 둔 채 `about.html` 로 옮겼습니다.
-> 전 페이지의 `index.html#about` 링크는 `about.html` 로 바뀌었고, 로고는 새 홈(`index.html`)으로 갑니다.
-> 다른 페이지가 쓰던 `index.html#download` 앵커는 새 홈의 Final CTA 가 같은 `id="download"` 를
-> 갖고 있어 그대로 동작합니다 — 링크를 고칠 필요가 없습니다.
 
 > 마이페이지 탭만 URL(`#tab`)에 반영됩니다. WORLD/NEWS 의 탭·필터·상세는 URL 에
 > 남지 않습니다 — 공유 가능한 딥링크가 필요하면 Production 에서 route 로 승격해야 합니다.
@@ -260,31 +251,12 @@ window.SPI18N.t('없는 문장')  // → '없는 문장'  (원문 그대로, 화
 panel.appendChild(SPPrevNext.build({
   prev:   { title, lang, badge, date, img, onClick } | null,
   next:   { … } | null,
-  list:   {           // '목록으로' 버튼
-    label, onClick,
-    align: 'split',                           // 선택 — 게시글 상세 Action Bar 형태
-    actions: [ { label, onClick, danger } ]   // 선택 — 없으면 예전과 동일
-  },
+  list:   { … },      // '목록으로' 버튼
   labels: { … }
 }));
 ```
 
 한쪽이 없으면 그 자리를 **아예 그리지 않습니다**(빈 상자가 남지 않게). 한쪽만 있으면 1열입니다.
-
-`align:'split'` 은 게시글 상세의 Action Bar 형태입니다 — 왼쪽 `[목록으로]`(Navigation),
-오른쪽 `actions`(Secondary · Destructive). PC · 태블릿 · 모바일이 **같은 한 줄 구조**를
-쓰고, 좁아지면 배치를 바꾸는 대신 padding 과 gap 만 줄어듭니다(320px 까지 한 줄 유지).
-
-```
-[ 목록으로 ]                              [ 수정 ] [ 삭제 ]
-```
-
-`actions` 가 비어도 `align:'split'` 이면 split 을 유지합니다 — 권한에 따라 수정/삭제가
-사라졌을 때 `[목록으로]` 가 갑자기 가운데 전체 폭 CTA 로 바뀌지 않게 하기 위함입니다.
-
-**둘 다 넘기지 않으면 `backwrap--split` 조차 붙지 않아** NEWS 공지·업데이트·이벤트
-상세는 DOM 과 정렬이 이전과 완전히 동일합니다(가운데 정렬된 `목록으로` 하나).
-새 액션을 추가할 때 이 컴포넌트를 복제하지 말고 `actions` 만 넘기세요.
 
 ### 애니메이션 규칙
 
@@ -297,24 +269,6 @@ panel.appendChild(SPPrevNext.build({
   죽은 코드가 됩니다.
 
 ---
-
-## 8-1. HOME 섹션 (index.html)
-
-| 섹션 | 구현 | 데이터 |
-|---|---|---|
-| **Hero** | `<video>` full-bleed (`autoplay muted loop playsinline`). ABOUT 하단과 **같은 파일**(`superplat-video.mp4`, ≤900px 는 `-720`). object-position 은 PC `center 42%` / 모바일 `center 38%` | — |
-| **Character** | Feature card + 자동 슬라이더(4.6s). 이미지·제목·설명이 한 인덱스로 묶여 움직입니다. hover 일시정지 · prev/next · swipe · 조작 후 8s 뒤 재개 | `HOME_SLIDES` (index.html 안) |
-| **World rail** | 목록을 2벌 이어 붙이고 `translateX` 를 한 벌 폭에서 wrap 하는 **seamless infinite rail**(22px/s). hover 감속 · drag/swipe · 1.2s 뒤 복귀 | `SPWorlds.ready()` |
-| **NEWS** | 카테고리 탭 + 카드 4장 (모바일 3장) | `SPNews.cats` |
-| **FAQ** | 카테고리별 대표 문답 5개 아코디언 (`aria-expanded` · 첫 항목 열림) | `SPFaq.list` |
-| **Final CTA** | 기존 자산(`world-blue-lagoon.jpg`) 위 그라디언트 배너 | — |
-
-⚠️ **rail 카드는 `<a>` 입니다.** `draggable=false` + `dragstart` preventDefault 가 없으면
-브라우저가 네이티브 링크 드래그를 시작하며 `pointercancel` 을 던져, 마우스 드래그가
-첫 프레임에서 끊깁니다(실측: 220px 를 끌어도 18px). 지우지 마세요.
-
-⚠️ **`pointerleave` 로 드래그를 끝내지 마세요.** `setPointerCapture` 호출 순간
-브라우저가 원래 타깃에 `pointerleave` 를 한 번 보내 같은 증상이 납니다.
 
 ## 9. WORLD & IP
 
@@ -338,15 +292,9 @@ panel.appendChild(SPPrevNext.build({
 | `fam` | 캐러셀 배경 색 계열. **사진에서 추출한 값이 아니라 지정된 매핑입니다** |
 | `pending` | 이미지 미수령 공간 — `.ready()` 가 걸러내어 두 화면 모두 렌더 제외 |
 
-`SPWorlds.ready()` 가 렌더 가능한 항목만 돌려줍니다. **현재 19개 전부 이미지가 있습니다.**
-
-⚠️ **`ko`(설명)가 비어 있는 공간이 2곳 있습니다** — `Theater Hall` · `Private Gallery`.
-문구를 아직 받지 못해 비워 두었고, WORLD & IP 카드는 공용 기본 문구로 대체 표시합니다
-(문구를 지어내지 않습니다). 확정되면 `ko` 만 채우면 됩니다. 홈은 이름+유형만 쓰므로 영향 없습니다.
-
-⚠️ **파일명과 공간명이 다른 곳이 있습니다.** 예: `In The Stillness` → `world-private-gallery.jpg`,
-`Stadium` → `world-vod.jpg`, `Theater Hall` → `world-stadium.jpg`.
-이름 ↔ 이미지 매칭은 확정본이므로 파일을 rename 하지 마세요.
+`SPWorlds.ready()` 가 렌더 가능한 항목만 돌려줍니다. **현재 19개 정의 중 16개 렌더**,
+3개(`In the sky` · `Art Space1` · `Art Space2`)는 이미지 파일 미수령 상태입니다.
+파일을 받으면 `img` 를 채우고 `pending` 줄만 지우면 두 화면에 동시에 나타납니다.
 
 ### 이미지 비율 — 상세 Viewer
 
@@ -409,35 +357,6 @@ evStatus(item)  // 'ongoing' | 'ended'
 
 `support.html` 은 `SPAuth.on()` 을 구독해 로그인/로그아웃 시 문의 화면을 다시 그립니다.
 **로컬 boolean 으로 로그인 상태를 캐시하지 마세요** — 헤더는 로그인인데 문의만 잠기는 버그가 났던 지점입니다.
-
-### 1:1 문의 수정 / 삭제 권한 — ⚠️ 서버에서 반드시 다시 검증하세요
-
-백엔드 정책이 아직 확정되지 않았으므로, 조건을 UI 곳곳에 흩뿌리지 않고
-`support.html` 안의 한 블록에 모아 두었습니다. 정책이 바뀌면 여기만 고치면 됩니다.
-
-```js
-function isMyInquiry(q)      { return !!uid && q.userId === uid; }   // 판정 기준은 이것 하나
-function canEditInquiry(q)   { return isMyInquiry(q) && q.st === 'wait'; }
-function canDeleteInquiry(q) { return isMyInquiry(q) && q.st === 'wait'; }
-function lockedByAnswer(q)   { return isMyInquiry(q) && q.st !== 'wait'; }
-```
-
-현재 규칙: **답변중 = 수정·삭제 가능 / 답변완료 = 둘 다 불가**(버튼을 숨기고 안내 문구를 노출).
-
-이 함수들은 **버튼을 그릴지 말지를 정할 뿐 권한 검증이 아닙니다.**
-실제 API 를 붙일 때는 수정·삭제 엔드포인트에서 서버가 소유자와 상태를 **다시** 확인해야 합니다.
-
-### 첨부파일
-
-```js
-attachments: [{ id, name, type, size, url }]
-```
-
-문의 작성 폼과 상세가 **같은 배열**을 봅니다 (상세에 임시 이미지를 넣는 구조가 아닙니다).
-Prototype 에서 `url` 은 `FileReader` 가 만든 data URL 이라 메모리에만 있습니다 —
-실제 서비스에서는 업로드 후 받은 **Storage URL 로 교체**하고,
-문의 삭제 시 Storage 객체 삭제 정책은 백엔드 정책을 따르세요.
-상세 확대 보기(`.alb`)는 `world.html` 의 `.wlb` 와 같은 구조이며 `object-fit:contain` 이라 잘리지 않습니다.
 
 ---
 
@@ -517,12 +436,10 @@ Production 전환 시 `CONFIG.DEV_CODE_HINT` 와 함께 제거하세요.
 
 | 영역 | 위치 |
 |---|---|
-| WORLD 공간 19개 (이름 · 유형 · 이미지 · 설명) | `assets/sp-worlds.js` |
-| 홈 캐릭터 슬라이드 4개 | `index.html` 의 `HOME_SLIDES` |
+| WORLD 공간 19개 | `assets/sp-worlds.js` |
 | IP 캐릭터 14개 | `world.html` 의 `ITEMS` 배열 뒷부분 |
-| 공지사항 · 업데이트 · 이벤트 | `assets/sp-news.js` |
-| FAQ | `assets/sp-faq.js` |
-| 1:1 문의 · 다운로드 | `support.html` |
+| 공지사항 · 업데이트 · 이벤트 | `news.html` 의 `CATS` |
+| FAQ · 1:1 문의 · 다운로드 | `support.html` |
 | 계정 · 세션 · 인증번호 | `assets/sp-auth.js` (localStorage) |
 | 재화 · 구독 · 결제수단 · 결제/환불 · 정산 | `assets/sp-auth.js` 의 `seedBilling()` |
 | KO/EN 사전 | `assets/sp-i18n.js` |
@@ -599,8 +516,7 @@ img.src = 'assets/' + (target.img || …);   // news.html
 
 | 파일 | 메모 |
 |---|---|
-| `assets/home-char-crew.jpg` | 이번에 전달받은 캐릭터 이미지 중 슬라이드 카피가 배정되지 않은 1장. 5번째 슬라이드가 필요해지면 문구만 추가하면 됩니다 |
-| `assets/space-private-gallery.jpg` · `space-pop-up-store.jpg` · `space-busan-museum.jpg` | 이번에 추가된 공간 이미지 3장. 기존 `world-*` 와 파일명 충돌을 피하려고 `space-` 접두사를 씁니다 |
+| `assets/dl-pc.jpg` · `dl-mobile.jpg` | 구버전 다운로드 카드 이미지. 현재 **참조되지 않습니다**(정적·런타임 모두 확인). 98KB — 삭제해도 되지만, 위 사고 이력 때문에 임의로 지우지 않고 남겼습니다 |
 | `assets/superplat-video-720.mp4` | 좁은 화면용 소스. `index.html` 에서 런타임에 교체합니다 |
 | `assets/*-detail.png` | 상세 Viewer 원본 (IP 14장 1080×1080, WORLD 2장 1920×1080) |
 | `assets/fonts/` | Pretendard Variable (OFL). `LICENSE.txt` 동봉 |

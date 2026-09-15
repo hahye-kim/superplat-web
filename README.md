@@ -25,8 +25,7 @@ GitHub Pages, 정적 호스팅 업로드 등). `file://` 로 더블클릭해도 
 
 ```
 superplat-web/
-├─ index.html      홈 (Video Hero · 캐릭터 슬라이더 · 공간 rail · NEWS · FAQ)
-├─ about.html      소개 (구 HOME)
+├─ index.html      홈
 ├─ world.html      WORLD & IP
 ├─ news.html       NEWS (공지 · 업데이트 · 이벤트)
 ├─ support.html    고객지원 (FAQ · 1:1 문의 · 다운로드)
